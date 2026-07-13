@@ -1,3 +1,11 @@
-from django.shortcuts import render
+from rest_framework import viewsets
 
-# Create your views here.
+from .models import EmailHistory
+from .serializers import EmailHistorySerializer
+
+
+class EmailHistoryViewSet(viewsets.ModelViewSet):
+
+    queryset = EmailHistory.objects.all().order_by("-sent_at")
+
+    serializer_class = EmailHistorySerializer
