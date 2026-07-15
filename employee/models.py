@@ -54,7 +54,8 @@ class Employee(models.Model):
         ],
     )
 
-    full_name = models.CharField(max_length=150)
+    first_name = models.CharField(max_length=100)
+    last_name = models.CharField(max_length=100)
 
     # unique=True gives us a DB-level constraint; serializer adds a friendlier error message
     email = models.EmailField(unique=True)
@@ -83,7 +84,8 @@ class Employee(models.Model):
     )
 
     status = models.BooleanField(default=True)  # Active / Inactive
-    joined_date = models.DateField()
+    salary = models.DecimalField(max_digits=10, decimal_places=2)
+    joining_date = models.DateField()
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -103,11 +105,14 @@ class Employee(models.Model):
         """
         errors = {}
 
-        if self.joined_date and self.joined_date > timezone.now().date():
-            errors['joined_date'] = "Joined date cannot be in the future."
+        if self.joining_date and self.joining_date > timezone.now().date():
+            errors['joining_date'] = "Joining date cannot be in the future."
+
+        if self.salary is not None and self.salary <= 0:
+            errors['salary'] = "Salary must be a positive number."
 
         if errors:
             raise ValidationError(errors)
 
     def __str__(self):
-        return f"{self.employee_id} - {self.full_name}"
+        return f"{self.employee_id} - {self.first_name} {self.last_name}"

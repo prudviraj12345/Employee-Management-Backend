@@ -24,9 +24,9 @@ class EmployeeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Employee
         fields = [
-            'id', 'employee_id', 'full_name', 'email', 'phone',
-            'department', 'department_name', 'designation', 'status',
-            'joined_date', 'created_at', 'updated_at',
+            'id', 'employee_id', 'first_name', 'last_name', 'email', 'phone',
+            'department', 'department_name', 'designation', 'salary', 'status',
+            'joining_date', 'created_at', 'updated_at',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 
@@ -70,17 +70,30 @@ class EmployeeSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(f"Phone number '{value}' is already in use.")
         return value
 
-    def validate_full_name(self, value):
+    def validate_first_name(self, value):
         value = value.strip()
         if len(value) < 2:
-            raise serializers.ValidationError("Full name is too short.")
+            raise serializers.ValidationError("First name is too short.")
         if any(ch.isdigit() for ch in value):
-            raise serializers.ValidationError("Full name cannot contain digits.")
+            raise serializers.ValidationError("First name cannot contain digits.")
         return value
 
-    def validate_joined_date(self, value):
+    def validate_last_name(self, value):
+        value = value.strip()
+        if len(value) < 2:
+            raise serializers.ValidationError("Last name is too short.")
+        if any(ch.isdigit() for ch in value):
+            raise serializers.ValidationError("Last name cannot contain digits.")
+        return value
+
+    def validate_joining_date(self, value):
         if value > date.today():
-            raise serializers.ValidationError("Joined date cannot be in the future.")
+            raise serializers.ValidationError("Joining date cannot be in the future.")
+        return value
+
+    def validate_salary(self, value):
+        if value <= 0:
+            raise serializers.ValidationError("Salary must be a positive number.")
         return value
 
     def validate_department(self, value):
