@@ -1107,6 +1107,59 @@
                 }
             });
         });
+
+        // Preview email handler
+        $('#emailPreviewBtn').on('click', function(e) {
+            e.preventDefault();
+            
+            if (selectedEmployeeIds.length === 0) {
+                Swal.fire('No Targets Selected', 'Please check at least one employee from the list to preview.', 'warning');
+                return;
+            }
+
+            const subjectTpl = $('#emailSubject').val().trim();
+            const messageTpl = $('#emailMessage').val().trim();
+
+            if (!subjectTpl || !messageTpl) {
+                Swal.fire('Empty Fields', 'Please enter a subject and message to preview.', 'warning');
+                return;
+            }
+
+            // Get first selected employee details
+            const empId = selectedEmployeeIds[0];
+            const emp = globalEmployees.find(e => e.id === empId);
+            if (!emp) return;
+
+            // Render placeholders
+            const renderedSubject = subjectTpl
+                .replace(/{{first_name}}/g, emp.first_name)
+                .replace(/{{last_name}}/g, emp.last_name)
+                .replace(/{{employee_id}}/g, emp.employee_id);
+
+            const renderedMessage = messageTpl
+                .replace(/{{first_name}}/g, emp.first_name)
+                .replace(/{{last_name}}/g, emp.last_name)
+                .replace(/{{employee_id}}/g, emp.employee_id);
+
+            const fileInput = document.getElementById('emailAttachment');
+            const attachmentName = (fileInput && fileInput.files.length > 0) ? fileInput.files[0].name : 'None';
+
+            Swal.fire({
+                title: 'Transmission Preview (First Recipient)',
+                html: `
+                    <div class="text-start" style="font-size:14px; line-height: 1.5;">
+                        <div class="mb-2"><b>To:</b> <span class="text-muted">${emp.first_name} ${emp.last_name} (${emp.email})</span></div>
+                        <div class="mb-2"><b>Subject:</b> <span class="mono border p-1 rounded d-block bg-light">${renderedSubject}</span></div>
+                        <div class="mb-2"><b>Message Body:</b>
+                            <div class="mono border p-2 rounded bg-light" style="white-space: pre-wrap; max-height: 250px; overflow-y: auto;">${renderedMessage}</div>
+                        </div>
+                        <div><b>Attachment:</b> <span class="badge bg-secondary-subtle text-secondary">${attachmentName}</span></div>
+                    </div>
+                `,
+                confirmButtonText: 'Looks Good',
+                confirmButtonColor: '#16a34a'
+            });
+        });
     }
 
     // Loop and trigger individual email dispatches to backend endpoint sequentially
@@ -1186,6 +1239,8 @@
     }
 
     // ==================== HISTORY LOGS MODULE ====================
+    let historyLogsData = [];
+
     function loadHistoryLogs() {
         setTableMessage('#tableHistory', 'Loading history...', 5);
 
@@ -1202,6 +1257,8 @@
     }
 
     function renderHistoryTable(logs) {
+        historyLogsData = logs; // Store globally
+
         const table = getDataTable('#tableHistory', {
             order: [[3, 'desc']],
             columnDefs: [
@@ -1222,7 +1279,7 @@
             return;
         }
 
-        logs.forEach(log => {
+        logs.forEach((log, index) => {
             const formattedTime = log.sent_at ? new Date(log.sent_at).toLocaleString() : '--';
             const sortableTime = log.sent_at ? `<span class="d-none">${log.sent_at}</span>${formattedTime}` : `<span class="d-none">0000-00-00</span>--`;
             const stateBadge = log.status === 'Sent' ?
@@ -1234,13 +1291,19 @@
                 `<div class="text-truncate" style="max-width:250px;"><b>${log.subject}</b> - ${log.message}</div>`,
                 stateBadge,
                 sortableTime,
-                `<button class="btn btn-light btn-sm text-primary" onclick="retrySingleLog('${log.recipient_email}', '${log.subject.replace(/'/g, "\\'")}', '${log.message.replace(/'/g, "\\'")}', ${log.employee})"><i data-lucide="refresh-cw" style="width:12px;"></i> Re-send</button>`
+                `<button class="btn btn-light btn-sm text-primary" onclick="retrySingleLogByIndex(${index})"><i data-lucide="refresh-cw" style="width:12px;"></i> Re-send</button>`
             ]);
         });
         table.draw();
         table.order([[3, 'desc']]).draw();
         table.columns.adjust();
         lucide.createIcons();
+    }
+
+    function retrySingleLogByIndex(index) {
+        const log = historyLogsData[index];
+        if (!log) return;
+        retrySingleLog(log.recipient_email, log.subject, log.message, log.employee);
     }
 
     function retrySingleLog(recipientEmail, subject, message, employeeId) {
