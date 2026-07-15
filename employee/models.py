@@ -62,7 +62,6 @@ class Employee(models.Model):
 
     phone = models.CharField(
         max_length=15,
-        unique=True,
         validators=[
             RegexValidator(
                 regex=r'^\+?\d{10,15}$',
@@ -78,7 +77,7 @@ class Employee(models.Model):
     )
 
     designation = models.CharField(
-        max_length=3,
+        max_length=100,
         choices=Designation.choices,
         default=Designation.SOFTWARE_ENGINEER,
     )
