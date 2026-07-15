@@ -14,3 +14,14 @@ class EmailLogSerializer(serializers.ModelSerializer):
             "sent_at",
             "created_at",
         )
+
+    def validate(self, data):
+        employee = data.get('employee')
+        recipient_email = data.get('recipient_email')
+        
+        if employee and recipient_email:
+            if employee.email != recipient_email:
+                raise serializers.ValidationError({
+                    "recipient_email": f"Recipient email must match the employee's registered email ({employee.email})."
+                })
+        return data
