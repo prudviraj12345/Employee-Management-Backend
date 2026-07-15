@@ -403,6 +403,22 @@
                 }
             });
         });
+
+        // Toggle password visibility handler
+        $('.toggle-password').on('click', function () {
+            const targetSelector = $(this).attr('data-target');
+            const targetInput = $(targetSelector);
+            const icon = $(this).find('i');
+            
+            if (targetInput.attr('type') === 'password') {
+                targetInput.attr('type', 'text');
+                icon.attr('data-lucide', 'eye-off');
+            } else {
+                targetInput.attr('type', 'password');
+                icon.attr('data-lucide', 'eye');
+            }
+            lucide.createIcons(); // Redraw Lucide icons
+        });
     }
 
     // ==================== TEMPLATES MODULE ====================
