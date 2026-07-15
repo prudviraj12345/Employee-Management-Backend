@@ -405,29 +405,78 @@
             margin-bottom:1rem;
             width:100%;
         }
-        .send-email-grid{
-            display:grid;
-            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-            gap:1.5rem;
-            width:100%;
-            max-width:none;
+        .send-email-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.75fr);
+            gap: 1.25rem;
+            width: 100%;
+            max-width: none;
+            height: calc(100vh - 165px);
+            min-height: 0;
         }
-        .send-email-panel{
-            display:flex;
-            min-width:0;
+        .send-email-panel {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            height: 100%;
         }
-        .send-email-grid .ep-card{
-            width:100%;
-            min-height: calc(100vh - 180px);
+        .send-email-grid .ep-card {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
         }
-        .recipient-list{
-            max-height: calc(100vh - 340px);
-            overflow-y:auto;
+        .recipient-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 0.75rem;
+            flex: 1;
+            overflow-y: auto;
+            min-height: 0;
+            padding-right: 6px;
         }
-        .compose-card textarea{ min-height:240px; resize:vertical; }
+        .recipient-list .employee-card {
+            border: 1px solid var(--border);
+            background: #fff;
+            transition: all 0.18s ease-in-out;
+            cursor: pointer;
+            margin-bottom: 0 !important;
+        }
+        .recipient-list .employee-card:hover {
+            border-color: var(--primary-bright);
+            box-shadow: 0 4px 12px rgba(78, 95, 207, 0.06);
+            transform: translateY(-1px);
+        }
+        .recipient-list .employee-card.selected-active {
+            border-color: var(--primary);
+            background-color: rgba(78, 95, 207, 0.03);
+        }
+        #formSendMail {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            min-height: 0;
+        }
+        .message-form-group {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-height: 0;
+            margin-bottom: 1rem;
+        }
+        .message-form-group textarea {
+            flex: 1;
+            resize: none !important;
+            min-height: 0;
+        }
         @media (max-width: 991.98px){
-            .send-email-grid{
+            .send-email-grid {
                 grid-template-columns: 1fr;
+                height: auto;
+            }
+            .recipient-list {
+                max-height: 400px;
             }
         }
 
@@ -445,9 +494,17 @@
             grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
             gap:1.5rem;
             width:100%;
+            align-items:stretch;
         }
         .profile-panel{
+            display:flex;
+            flex-direction:column;
             min-height:305px;
+        }
+        .profile-form{
+            display:flex;
+            flex:1;
+            flex-direction:column;
         }
         .profile-panel .form-control{
             padding:.7rem .8rem;

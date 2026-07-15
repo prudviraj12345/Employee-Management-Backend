@@ -5,9 +5,17 @@
                         <span class="ep-eyebrow">Content Library</span>
                         <h4 class="ep-page-title m-0">Corporate Content Templates</h4>
                     </div>
-                    <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#modalTemplate"><i data-lucide="plus" style="width:14px;"></i> Create Template</button>
+                    <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#modalTemplate" onclick="openCreateTemplateModal()"><i data-lucide="plus" style="width:14px;"></i> Create Template</button>
                 </div>
                 <div class="card ep-card p-4 bg-white">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="input-group" style="max-width: 350px;">
+                            <span class="input-group-text bg-white border-end-0">
+                                <i data-lucide="search" style="width:14px;height:14px;"></i>
+                            </span>
+                            <input type="text" class="form-control border-start-0" placeholder="Search templates..." id="templateSearchInput">
+                        </div>
+                    </div>
                     <div class="table-responsive">
                         <table class="table table-hover align-middle w-100" id="tableTemplates">
                             <thead class="table-light">
@@ -20,16 +28,10 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td class="fw-semibold">Q3 Corporate Staff Onboarding Announcement</td>
-                                    <td class="mono">Welcome to the team, {{name}}!</td>
-                                    <td class="mono">Jul 10, 2026</td>
-                                    <td><button class="btn btn-light text-danger btn-sm px-2 py-1 border" onclick="actionMockDelete()"><i data-lucide="trash-2" style="width:14px;"></i></button></td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-semibold">Quarterly Benefits Architecture Review</td>
-                                    <td class="mono">Action Required: Update parameters regarding insurance adjustments</td>
-                                    <td class="mono">Jun 15, 2026</td>
-                                    <td><button class="btn btn-light text-danger btn-sm px-2 py-1 border" onclick="actionMockDelete()"><i data-lucide="trash-2" style="width:14px;"></i></button></td>
+                                    <td class="text-muted py-4">Loading templates...</td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
                                 </tr>
                             </tbody>
                         </table>

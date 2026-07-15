@@ -1,12 +1,64 @@
+<style>
+    .filter-pill {
+        border: none !important;
+        background: transparent !important;
+        font-weight: 500;
+        font-size: 13px;
+        padding: 6px 16px;
+        border-radius: 50px;
+        transition: all 0.2s ease-in-out;
+        color: #6c757d;
+    }
+    .filter-pill:hover {
+        color: #212529;
+        background-color: rgba(0, 0, 0, 0.03) !important;
+    }
+    .filter-pill.active {
+        background: #ffffff !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+        color: #212529 !important;
+    }
+    .filter-pill.active.text-success {
+        color: #198754 !important;
+        background: #e8f5e9 !important;
+    }
+    .filter-pill.active.text-danger {
+        color: #d32f2f !important;
+        background: #ffebee !important;
+    }
+</style>
+
 <!-- 6. EMAIL HISTORY COMPONENT VIEW -->
             <div id="view-history" class="app-view view-wide">
-                <div class="ep-page-head">
+                <div class="ep-page-head flex-column align-items-start gap-1">
                     <div>
                         <span class="ep-eyebrow">Audit Trail</span>
                         <h4 class="ep-page-title m-0">System Execution Logs</h4>
                     </div>
+                    <p class="text-muted small m-0 mt-1 d-flex align-items-center gap-1">
+                        <i data-lucide="info" style="width:14px;height:14px;color:#0d6efd;"></i> 
+                        <span>Tip: Click on any column header (such as <b>Dispatched Time Matrix</b>) to sort the logs.</span>
+                    </p>
                 </div>
                 <div class="card ep-card full-width-card p-4 bg-white">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+                        <div class="input-group" style="max-width: 350px;">
+                            <span class="input-group-text bg-white border-end-0">
+                                <i data-lucide="search" style="width:14px;height:14px;"></i>
+                            </span>
+                            <input type="text" class="form-control border-start-0" placeholder="Search execution logs..." id="historySearchInput">
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="text-secondary small fw-semibold d-flex align-items-center gap-1">
+                                <i data-lucide="filter" style="width:12px;height:12px;"></i> Status:
+                            </span>
+                            <div class="d-inline-flex p-1 bg-light rounded-pill border" id="historyFilterGroup">
+                                <button type="button" class="btn btn-sm filter-pill active text-dark" data-status="all">All Logs</button>
+                                <button type="button" class="btn btn-sm filter-pill text-success" data-status="Sent">Sent</button>
+                                <button type="button" class="btn btn-sm filter-pill text-danger" data-status="Failed">Failed</button>
+                            </div>
+                        </div>
+                    </div>
                     <div class="table-responsive">
                         <table class="table table-hover align-middle w-100" id="tableHistory">
                             <thead class="table-light">
@@ -20,22 +72,14 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td>Rahul Verma</td>
-                                    <td class="text-truncate" style="max-width: 200px;">Project Deployment Framework Sync Parameters</td>
-                                    <td><span class="badge bg-success-subtle">SUCCESS</span></td>
-                                    <td class="mono">2026-07-11 10:14</td>
-                                    <td><button class="btn btn-light btn-sm" disabled><i data-lucide="refresh-cw" style="width:12px;"></i></button></td>
-                                </tr>
-                                <tr>
-                                    <td>Ananya Sharma</td>
-                                    <td class="text-truncate" style="max-width: 200px;">Q3 Forecast Strategy Realignment Blueprint Docs</td>
-                                    <td><span class="badge bg-danger-subtle">FAILED</span></td>
-                                    <td class="mono">2026-07-11 09:30</td>
-                                    <td><button class="btn btn-light text-primary btn-sm border" onclick="triggerGenericToast('Re-queue request dispatched to message broker cluster.')"><i data-lucide="refresh-cw" style="width:12px;"></i> Retry</button></td>
+                                    <td class="text-muted py-4">Loading history...</td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
                 </div>
             </div>
-            <!-- 7.

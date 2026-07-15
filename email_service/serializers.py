@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import EmailLog
+from .models import EmailLog, EmailTemplate
 
 
 class EmailLogSerializer(serializers.ModelSerializer):
@@ -25,3 +25,9 @@ class EmailLogSerializer(serializers.ModelSerializer):
                     "recipient_email": f"Recipient email must match the employee's registered email ({employee.email})."
                 })
         return data
+
+
+class EmailTemplateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = EmailTemplate
+        fields = "__all__"
