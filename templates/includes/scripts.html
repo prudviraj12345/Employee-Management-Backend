@@ -1,461 +1,461 @@
 <!-- ==================== RUNTIME SYSTEM SCRIPTS ORCHESTRATION ==================== -->
-    <!-- Dependencies Bootstrap Integration Layers -->
-    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
-    <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<!-- Dependencies Bootstrap Integration Layers -->
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
 
-    {% verbatim %}
-    <script>
-        // API Base URL config
-        const API_BASE = window.location.protocol.startsWith('http') ? '/api/' : 'http://127.0.0.1:8000/api/';
+{% verbatim %}
+<script>
+    // API Base URL config
+    const API_BASE = window.location.protocol.startsWith('http') ? '/api/' : 'http://127.0.0.1:8000/api/';
 
-        // Configure AJAX to pass Token Authentication header automatically
-        $.ajaxSetup({
-            beforeSend: function(xhr) {
-                const token = localStorage.getItem('token');
-                if (token) {
-                    xhr.setRequestHeader('Authorization', 'Token ' + token);
-                }
-            }
-        });
-
-        // Global AJAX error interceptor for unauthorized requests (401/403)
-        $(document).ajaxError(function(event, xhr, settings) {
-            if (xhr.status === 401 || xhr.status === 403) {
-                if (settings.url.indexOf('login') === -1) {
-                    localStorage.removeItem('token');
-                    Swal.fire({
-                        title: 'Unauthorized Action',
-                        text: 'Your session has expired. Please sign in again.',
-                        icon: 'warning'
-                    });
-                    checkAuthState();
-                }
-            }
-        });
-
-        // Initialize elements on load
-        $(document).ready(function() {
-            lucide.createIcons();
-            checkAuthState();
-            setupNavigationHandlers();
-            setupUiHandlers();
-            setupFormSubmissions();
-            setupEmailModuleHandlers();
-            setupProfileHandlers();
-            setupTemplateHandlers();
-            loadTemplates(null, false);
-        });
-
-        function getDataTable(selector, customOptions = {}) {
-            if ($.fn.DataTable.isDataTable(selector)) {
-                return $(selector).DataTable();
-            }
-            const defaults = {
-                retrieve: true,
-                deferRender: true,
-                autoWidth: false,
-                pageLength: 10,
-                dom: 'rt<"row align-items-center mt-3"<"col-md-6"i><"col-md-6"p>>'
-            };
-            if (selector === '#tableHistory') {
-                defaults.order = [[3, 'desc']];
-                defaults.columnDefs = [
-                    { orderable: false, targets: [4] }
-                ];
-            }
-            return $(selector).DataTable($.extend(true, defaults, customOptions));
-        }
-
-        function setTableMessage(selector, message, columnCount) {
-            const table = getDataTable(selector);
-            const cells = Array(columnCount).fill('');
-            cells[0] = `<span class="text-muted">${message}</span>`;
-            table.clear();
-            table.row.add(cells);
-            table.draw();
-        }
-
-        function setupUiHandlers() {
-            $('#toggleLoginPassword').on('click', function() {
-                const input = $('#loginPassword');
-                const isPassword = input.attr('type') === 'password';
-                input.attr('type', isPassword ? 'text' : 'password');
-                $(this).attr('aria-label', isPassword ? 'Hide password' : 'Show password');
-                $(this).html(`<i data-lucide="${isPassword ? 'eye-off' : 'eye'}" style="width:14px;height:14px;"></i>`);
-                lucide.createIcons();
-            });
-
-            $('#filter-emp-search').on('input', applyEmployeeFilters);
-            $('#filter-emp-dept').on('change', applyEmployeeFilters);
-            $('#filter-emp-status').on('change', applyEmployeeFilters);
-
-            // History table search listener
-            $('#historySearchInput').on('keyup', function() {
-                $('#tableHistory').DataTable().search(this.value).draw();
-            });
-
-            // History table status filter listener (pill buttons)
-            $('#historyFilterGroup').on('click', '.filter-pill', function() {
-                $('#historyFilterGroup .filter-pill').removeClass('active');
-                $(this).addClass('active');
-
-                const val = $(this).data('status');
-                const table = $('#tableHistory').DataTable();
-                if (val === 'all') {
-                    table.column(2).search('').draw();
-                } else {
-                    table.column(2).search('^' + val + '$', true, false).draw();
-                }
-            });
-
-            // Templates table search listener
-            $('#templateSearchInput').on('keyup', function() {
-                $('#tableTemplates').DataTable().search(this.value).draw();
-            });
-        }
-
-        // Check authentication state to toggle views
-        function checkAuthState() {
+    // Configure AJAX to pass Token Authentication header automatically
+    $.ajaxSetup({
+        beforeSend: function (xhr) {
             const token = localStorage.getItem('token');
             if (token) {
-                $('#auth-container').hide();
-                $('#app-wrapper').css('display', 'flex');
-                $('.navbar-custom').css('display', 'flex');
-                
-                // Set admin credentials UI
-                const adminUser = localStorage.getItem('adminUser') || 'admin';
-                syncProfileUi(adminUser);
-                
-                // Navigate to employees list by default
-                switchView('view-employees');
+                xhr.setRequestHeader('Authorization', 'Token ' + token);
+            }
+        }
+    });
+
+    // Global AJAX error interceptor for unauthorized requests (401/403)
+    $(document).ajaxError(function (event, xhr, settings) {
+        if (xhr.status === 401 || xhr.status === 403) {
+            if (settings.url.indexOf('login') === -1) {
+                localStorage.removeItem('token');
+                Swal.fire({
+                    title: 'Unauthorized Action',
+                    text: 'Your session has expired. Please sign in again.',
+                    icon: 'warning'
+                });
+                checkAuthState();
+            }
+        }
+    });
+
+    // Initialize elements on load
+    $(document).ready(function () {
+        lucide.createIcons();
+        checkAuthState();
+        setupNavigationHandlers();
+        setupUiHandlers();
+        setupFormSubmissions();
+        setupEmailModuleHandlers();
+        setupProfileHandlers();
+        setupTemplateHandlers();
+        loadTemplates(null, false);
+    });
+
+    function getDataTable(selector, customOptions = {}) {
+        if ($.fn.DataTable.isDataTable(selector)) {
+            return $(selector).DataTable();
+        }
+        const defaults = {
+            retrieve: true,
+            deferRender: true,
+            autoWidth: false,
+            pageLength: 10,
+            dom: 'rt<"row align-items-center mt-3"<"col-md-6"i><"col-md-6"p>>'
+        };
+        if (selector === '#tableHistory') {
+            defaults.order = [[3, 'desc']];
+            defaults.columnDefs = [
+                { orderable: false, targets: [4] }
+            ];
+        }
+        return $(selector).DataTable($.extend(true, defaults, customOptions));
+    }
+
+    function setTableMessage(selector, message, columnCount) {
+        const table = getDataTable(selector);
+        const cells = Array(columnCount).fill('');
+        cells[0] = `<span class="text-muted">${message}</span>`;
+        table.clear();
+        table.row.add(cells);
+        table.draw();
+    }
+
+    function setupUiHandlers() {
+        $('#toggleLoginPassword').on('click', function () {
+            const input = $('#loginPassword');
+            const isPassword = input.attr('type') === 'password';
+            input.attr('type', isPassword ? 'text' : 'password');
+            $(this).attr('aria-label', isPassword ? 'Hide password' : 'Show password');
+            $(this).html(`<i data-lucide="${isPassword ? 'eye-off' : 'eye'}" style="width:14px;height:14px;"></i>`);
+            lucide.createIcons();
+        });
+
+        $('#filter-emp-search').on('input', applyEmployeeFilters);
+        $('#filter-emp-dept').on('change', applyEmployeeFilters);
+        $('#filter-emp-status').on('change', applyEmployeeFilters);
+
+        // History table search listener
+        $('#historySearchInput').on('keyup', function () {
+            $('#tableHistory').DataTable().search(this.value).draw();
+        });
+
+        // History table status filter listener (pill buttons)
+        $('#historyFilterGroup').on('click', '.filter-pill', function () {
+            $('#historyFilterGroup .filter-pill').removeClass('active');
+            $(this).addClass('active');
+
+            const val = $(this).data('status');
+            const table = $('#tableHistory').DataTable();
+            if (val === 'all') {
+                table.column(2).search('').draw();
             } else {
-                $('#app-wrapper').hide();
-                $('.navbar-custom').hide();
-                $('#auth-container').css('display', 'flex');
+                table.column(2).search('^' + val + '$', true, false).draw();
             }
+        });
+
+        // Templates table search listener
+        $('#templateSearchInput').on('keyup', function () {
+            $('#tableTemplates').DataTable().search(this.value).draw();
+        });
+    }
+
+    // Check authentication state to toggle views
+    function checkAuthState() {
+        const token = localStorage.getItem('token');
+        if (token) {
+            $('#auth-container').hide();
+            $('#app-wrapper').css('display', 'flex');
+            $('.navbar-custom').css('display', 'flex');
+
+            // Set admin credentials UI
+            const adminUser = localStorage.getItem('adminUser') || 'admin';
+            syncProfileUi(adminUser);
+
+            // Navigate to employees list by default
+            switchView('view-employees');
+        } else {
+            $('#app-wrapper').hide();
+            $('.navbar-custom').hide();
+            $('#auth-container').css('display', 'flex');
         }
+    }
 
-        // Handle Login Submission
-        function handleSystemLogin(event) {
-            event.preventDefault();
-            const username = $('#loginEmail').val();
-            const password = $('#loginPassword').val();
+    // Handle Login Submission
+    function handleSystemLogin(event) {
+        event.preventDefault();
+        const username = $('#loginEmail').val();
+        const password = $('#loginPassword').val();
 
-            $.ajax({
-                url: API_BASE + 'login/',
-                type: 'POST',
-                data: JSON.stringify({ username, password }),
-                contentType: 'application/json',
-                success: function(response) {
-                    if (response.success && response.token) {
-                        localStorage.setItem('token', response.token);
-                        if (response.profile) {
-                            saveProfileData(response.profile);
-                        } else {
-                            localStorage.setItem('adminUser', username);
-                        }
-                        
-                        Swal.fire({
-                            title: 'Success!',
-                            text: 'Login successful.',
-                            icon: 'success',
-                            timer: 1500,
-                            showConfirmButton: false
-                        });
-                        checkAuthState();
-                    } else {
-                        Swal.fire('Login Failed', response.message || 'Invalid credentials.', 'error');
-                    }
-                },
-                error: function(xhr) {
-                    let errMsg = 'Could not reach server.';
-                    if (xhr.responseJSON) {
-                        errMsg = xhr.responseJSON.message || JSON.stringify(xhr.responseJSON);
-                    }
-                    Swal.fire('Authentication Error', errMsg, 'error');
-                }
-            });
-        }
-
-        // Handle Logout Action
-        function handleSystemLogout() {
-            Swal.fire({
-                title: 'Logout Request',
-                text: 'Are you sure you want to end your session?',
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonColor: '#16a34a',
-                cancelButtonColor: '#dc2626',
-                confirmButtonText: 'Yes, Sign Out'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    localStorage.removeItem('token');
-                    localStorage.removeItem('adminUser');
-                    checkAuthState();
-                }
-            });
-        }
-
-        // Navigation tab trigger handler
-        function setupNavigationHandlers() {
-            $('.nav-link-custom').on('click', function(e) {
-                e.preventDefault();
-                if ($(this).hasClass('logout')) return;
-                
-                const targetViewId = $(this).data('target');
-                if (!targetViewId) return;
-
-                $('.nav-link-custom').removeClass('active');
-                $(this).addClass('active');
-
-                switchView(targetViewId);
-            });
-            
-            // Collapsible Sidebar handler
-            $('#sidebarToggle').on('click', function() {
-                $('#sidebar').toggleClass('collapsed');
-                $('.main-workspace').toggleClass('expanded');
-            });
-        }
-
-        function switchView(viewId) {
-            $('.app-view').removeClass('active-view');
-            $('#' + viewId).addClass('active-view');
-
-            if (viewId === 'view-dashboard') {
-                loadDashboardData();
-            } else if (viewId === 'view-employees') {
-                loadEmployees();
-            } else if (viewId === 'view-departments') {
-                loadDepartments();
-            } else if (viewId === 'view-send-email') {
-                loadSendEmailPanel();
-            } else if (viewId === 'view-history') {
-                loadHistoryLogs();
-            } else if (viewId === 'view-templates') {
-                loadTemplates();
-            } else if (viewId === 'view-settings') {
-                syncProfileUi();
-                resetPasswordForm();
-                loadProfileFromServer();
-            }
-
-            $.fn.dataTable
-                .tables({ visible: true, api: true })
-                .columns.adjust();
-        }
-
-        function loadDashboardData() {
-            $('#dash-count-emp, #dash-count-dept, #dash-count-sent, #dash-count-failed').text('Loading...');
-
-            $.when(
-                $.ajax({ url: API_BASE + 'employees/', type: 'GET' }),
-                $.ajax({ url: API_BASE + 'departments/', type: 'GET' }),
-                $.ajax({ url: API_BASE + 'history/', type: 'GET' })
-            ).done(function(employeeResponse, departmentResponse, historyResponse) {
-                const employees = employeeResponse[0] || [];
-                const departments = departmentResponse[0] || [];
-                const logs = historyResponse[0] || [];
-                const today = new Date().toDateString();
-                const todaysLogs = logs.filter(log => log.sent_at && new Date(log.sent_at).toDateString() === today);
-                const failedLogs = logs.filter(log => log.status && log.status.toLowerCase() !== 'sent');
-
-                $('#dash-count-emp').text(employees.length);
-                $('#dash-count-dept').text(departments.length);
-                $('#dash-count-sent').text(todaysLogs.length);
-                $('#dash-count-failed').text(failedLogs.length);
-            }).fail(function() {
-                $('#dash-count-emp, #dash-count-dept, #dash-count-sent, #dash-count-failed').text('--');
-            });
-        }
-
-        function getProfileData(defaultUsername) {
-            const savedProfile = JSON.parse(localStorage.getItem('adminProfile') || '{}');
-            const username = savedProfile.username || defaultUsername || localStorage.getItem('adminUser') || 'admin';
-            return {
-                username: username,
-                email: savedProfile.email || 'admin@company.com',
-                displayName: savedProfile.displayName || username
-            };
-        }
-
-        function saveProfileData(profile) {
-            const normalized = {
-                username: profile.username || 'admin',
-                email: profile.email || '',
-                displayName: profile.display_name || profile.displayName || profile.username || 'admin'
-            };
-            localStorage.setItem('adminUser', normalized.username);
-            localStorage.setItem('adminProfile', JSON.stringify(normalized));
-            syncProfileUi(normalized.username);
-        }
-
-        function syncProfileUi(defaultUsername) {
-            const profile = getProfileData(defaultUsername);
-            const displayName = profile.displayName || profile.username;
-            const initials = displayName.slice(0, 2).toUpperCase();
-
-            $('#userDisplayName').text(displayName);
-            $('#userInitials').text(initials);
-            $('#profileUsername').val(profile.username);
-            $('#profileEmail').val(profile.email);
-                $('#profileDisplayName').val(displayName);
-        }
-
-        function loadProfileFromServer() {
-            $.ajax({
-                url: API_BASE + 'profile/',
-                type: 'GET',
-                success: function(profile) {
-                    saveProfileData(profile);
-                }
-            });
-        }
-
-        function resetPasswordForm() {
-            $('#currentPassword, #newPassword, #confirmNewPassword').val('');
-        }
-
-        function setupProfileHandlers() {
-            $('#formProfileDetails').on('submit', function(e) {
-                e.preventDefault();
-                const profile = {
-                    username: $('#profileUsername').val().trim(),
-                    email: $('#profileEmail').val().trim(),
-                    displayName: $('#profileDisplayName').val().trim()
-                };
-
-                if (!profile.username || !profile.displayName) {
-                    Swal.fire('Missing Details', 'Username and display name are required.', 'warning');
-                    return;
-                }
-
-                $.ajax({
-                    url: API_BASE + 'profile/',
-                    type: 'PUT',
-                    data: JSON.stringify({
-                        username: profile.username,
-                        email: profile.email,
-                        display_name: profile.displayName
-                    }),
-                    contentType: 'application/json',
-                    success: function(response) {
+        $.ajax({
+            url: API_BASE + 'login/',
+            type: 'POST',
+            data: JSON.stringify({ username, password }),
+            contentType: 'application/json',
+            success: function (response) {
+                if (response.success && response.token) {
+                    localStorage.setItem('token', response.token);
+                    if (response.profile) {
                         saveProfileData(response.profile);
-                        Swal.fire('Profile Updated', response.message || 'Profile details updated.', 'success');
-                    },
-                    error: function(xhr) {
-                        let msg = 'Could not update profile.';
-                        if (xhr.responseJSON) {
-                            msg = Object.keys(xhr.responseJSON).map(key => `${key}: ${xhr.responseJSON[key]}`).join('<br>');
-                        }
-                        Swal.fire('Update Failed', msg, 'error');
+                    } else {
+                        localStorage.setItem('adminUser', username);
                     }
-                });
-            });
 
-            $('#formChangePassword').on('submit', function(e) {
-                e.preventDefault();
-                const currentPassword = $('#currentPassword').val();
-                const newPassword = $('#newPassword').val();
-                const confirmNewPassword = $('#confirmNewPassword').val();
-
-                if (!currentPassword || !newPassword || !confirmNewPassword) {
-                    Swal.fire('Missing Password', 'Enter current, new, and confirm password.', 'warning');
-                    return;
+                    Swal.fire({
+                        title: 'Success!',
+                        text: 'Login successful.',
+                        icon: 'success',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+                    checkAuthState();
+                } else {
+                    Swal.fire('Login Failed', response.message || 'Invalid credentials.', 'error');
                 }
-
-                if (newPassword.length < 6) {
-                    Swal.fire('Weak Password', 'New password must be at least 6 characters.', 'warning');
-                    return;
+            },
+            error: function (xhr) {
+                let errMsg = 'Could not reach server.';
+                if (xhr.responseJSON) {
+                    errMsg = xhr.responseJSON.message || JSON.stringify(xhr.responseJSON);
                 }
-
-                if (newPassword !== confirmNewPassword) {
-                    Swal.fire('Password Mismatch', 'New password and confirm password must match.', 'warning');
-                    return;
-                }
-
-                $.ajax({
-                    url: API_BASE + 'change-password/',
-                    type: 'POST',
-                    data: JSON.stringify({
-                        current_password: currentPassword,
-                        new_password: newPassword
-                    }),
-                    contentType: 'application/json',
-                    success: function(response) {
-                        if (response.token) {
-                            localStorage.setItem('token', response.token);
-                        }
-                        $('#formChangePassword')[0].reset();
-                        Swal.fire('Password Updated', response.message || 'Password changed successfully.', 'success');
-                    },
-                    error: function(xhr) {
-                        let msg = 'Could not change password.';
-                        if (xhr.responseJSON) {
-                            msg = Object.keys(xhr.responseJSON).map(key => `${key}: ${xhr.responseJSON[key]}`).join('<br>');
-                        }
-                        Swal.fire('Password Change Failed', msg, 'error');
-                    }
-                });
-            });
-        }
-
-        // ==================== TEMPLATES MODULE ====================
-        let globalTemplates = [];
-
-        function loadTemplates(callback, shouldRender = true) {
-            if (shouldRender) {
-                setTableMessage('#tableTemplates', 'Loading templates...', 4);
+                Swal.fire('Authentication Error', errMsg, 'error');
             }
+        });
+    }
 
-            $.ajax({
-                url: API_BASE + 'templates/',
-                type: 'GET',
-                success: function(data) {
-                    globalTemplates = data;
-                    if (shouldRender) {
-                        renderTemplatesTable(data);
-                    }
-                    populateEmailTemplateDropdown();
-                    if (callback) callback(data);
-                },
-                error: function() {
-                    Swal.fire('Error', 'Failed to retrieve email templates.', 'error');
-                }
-            });
+    // Handle Logout Action
+    function handleSystemLogout() {
+        Swal.fire({
+            title: 'Logout Request',
+            text: 'Are you sure you want to end your session?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#16a34a',
+            cancelButtonColor: '#dc2626',
+            confirmButtonText: 'Yes, Sign Out'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                localStorage.removeItem('token');
+                localStorage.removeItem('adminUser');
+                checkAuthState();
+            }
+        });
+    }
+
+    // Navigation tab trigger handler
+    function setupNavigationHandlers() {
+        $('.nav-link-custom').on('click', function (e) {
+            e.preventDefault();
+            if ($(this).hasClass('logout')) return;
+
+            const targetViewId = $(this).data('target');
+            if (!targetViewId) return;
+
+            $('.nav-link-custom').removeClass('active');
+            $(this).addClass('active');
+
+            switchView(targetViewId);
+        });
+
+        // Collapsible Sidebar handler
+        $('#sidebarToggle').on('click', function () {
+            $('#sidebar').toggleClass('collapsed');
+            $('.main-workspace').toggleClass('expanded');
+        });
+    }
+
+    function switchView(viewId) {
+        $('.app-view').removeClass('active-view');
+        $('#' + viewId).addClass('active-view');
+
+        if (viewId === 'view-dashboard') {
+            loadDashboardData();
+        } else if (viewId === 'view-employees') {
+            loadEmployees();
+        } else if (viewId === 'view-departments') {
+            loadDepartments();
+        } else if (viewId === 'view-send-email') {
+            loadSendEmailPanel();
+        } else if (viewId === 'view-history') {
+            loadHistoryLogs();
+        } else if (viewId === 'view-templates') {
+            loadTemplates();
+        } else if (viewId === 'view-settings') {
+            syncProfileUi();
+            resetPasswordForm();
+            loadProfileFromServer();
         }
 
-        function renderTemplatesTable(templates) {
-            const table = getDataTable('#tableTemplates');
-            table.clear();
+        $.fn.dataTable
+            .tables({ visible: true, api: true })
+            .columns.adjust();
+    }
 
-            const list = templates || globalTemplates;
+    function loadDashboardData() {
+        $('#dash-count-emp, #dash-count-dept, #dash-count-sent, #dash-count-failed').text('Loading...');
 
-            if (list.length === 0) {
-                table.row.add([
-                    '<span class="text-muted">No templates available.</span>',
-                    '',
-                    '',
-                    ''
-                ]);
-                table.draw();
-                populateEmailTemplateDropdown();
+        $.when(
+            $.ajax({ url: API_BASE + 'employees/', type: 'GET' }),
+            $.ajax({ url: API_BASE + 'departments/', type: 'GET' }),
+            $.ajax({ url: API_BASE + 'history/', type: 'GET' })
+        ).done(function (employeeResponse, departmentResponse, historyResponse) {
+            const employees = employeeResponse[0] || [];
+            const departments = departmentResponse[0] || [];
+            const logs = historyResponse[0] || [];
+            const today = new Date().toDateString();
+            const todaysLogs = logs.filter(log => log.sent_at && new Date(log.sent_at).toDateString() === today);
+            const failedLogs = logs.filter(log => log.status && log.status.toLowerCase() !== 'sent');
+
+            $('#dash-count-emp').text(employees.length);
+            $('#dash-count-dept').text(departments.length);
+            $('#dash-count-sent').text(todaysLogs.length);
+            $('#dash-count-failed').text(failedLogs.length);
+        }).fail(function () {
+            $('#dash-count-emp, #dash-count-dept, #dash-count-sent, #dash-count-failed').text('--');
+        });
+    }
+
+    function getProfileData(defaultUsername) {
+        const savedProfile = JSON.parse(localStorage.getItem('adminProfile') || '{}');
+        const username = savedProfile.username || defaultUsername || localStorage.getItem('adminUser') || 'admin';
+        return {
+            username: username,
+            email: savedProfile.email || 'admin@company.com',
+            displayName: savedProfile.displayName || username
+        };
+    }
+
+    function saveProfileData(profile) {
+        const normalized = {
+            username: profile.username || 'admin',
+            email: profile.email || '',
+            displayName: profile.display_name || profile.displayName || profile.username || 'admin'
+        };
+        localStorage.setItem('adminUser', normalized.username);
+        localStorage.setItem('adminProfile', JSON.stringify(normalized));
+        syncProfileUi(normalized.username);
+    }
+
+    function syncProfileUi(defaultUsername) {
+        const profile = getProfileData(defaultUsername);
+        const displayName = profile.displayName || profile.username;
+        const initials = displayName.slice(0, 2).toUpperCase();
+
+        $('#userDisplayName').text(displayName);
+        $('#userInitials').text(initials);
+        $('#profileUsername').val(profile.username);
+        $('#profileEmail').val(profile.email);
+        $('#profileDisplayName').val(displayName);
+    }
+
+    function loadProfileFromServer() {
+        $.ajax({
+            url: API_BASE + 'profile/',
+            type: 'GET',
+            success: function (profile) {
+                saveProfileData(profile);
+            }
+        });
+    }
+
+    function resetPasswordForm() {
+        $('#currentPassword, #newPassword, #confirmNewPassword').val('');
+    }
+
+    function setupProfileHandlers() {
+        $('#formProfileDetails').on('submit', function (e) {
+            e.preventDefault();
+            const profile = {
+                username: $('#profileUsername').val().trim(),
+                email: $('#profileEmail').val().trim(),
+                displayName: $('#profileDisplayName').val().trim()
+            };
+
+            if (!profile.username || !profile.displayName) {
+                Swal.fire('Missing Details', 'Username and display name are required.', 'warning');
                 return;
             }
 
-            list.forEach(template => {
-                const formattedDate = template.updated_at ? new Date(template.updated_at).toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric'
-                }) : '--';
+            $.ajax({
+                url: API_BASE + 'profile/',
+                type: 'PUT',
+                data: JSON.stringify({
+                    username: profile.username,
+                    email: profile.email,
+                    display_name: profile.displayName
+                }),
+                contentType: 'application/json',
+                success: function (response) {
+                    saveProfileData(response.profile);
+                    Swal.fire('Profile Updated', response.message || 'Profile details updated.', 'success');
+                },
+                error: function (xhr) {
+                    let msg = 'Could not update profile.';
+                    if (xhr.responseJSON) {
+                        msg = Object.keys(xhr.responseJSON).map(key => `${key}: ${xhr.responseJSON[key]}`).join('<br>');
+                    }
+                    Swal.fire('Update Failed', msg, 'error');
+                }
+            });
+        });
 
-                const actionButtons = `
+        $('#formChangePassword').on('submit', function (e) {
+            e.preventDefault();
+            const currentPassword = $('#currentPassword').val();
+            const newPassword = $('#newPassword').val();
+            const confirmNewPassword = $('#confirmNewPassword').val();
+
+            if (!currentPassword || !newPassword || !confirmNewPassword) {
+                Swal.fire('Missing Password', 'Enter current, new, and confirm password.', 'warning');
+                return;
+            }
+
+            if (newPassword.length < 6) {
+                Swal.fire('Weak Password', 'New password must be at least 6 characters.', 'warning');
+                return;
+            }
+
+            if (newPassword !== confirmNewPassword) {
+                Swal.fire('Password Mismatch', 'New password and confirm password must match.', 'warning');
+                return;
+            }
+
+            $.ajax({
+                url: API_BASE + 'change-password/',
+                type: 'POST',
+                data: JSON.stringify({
+                    current_password: currentPassword,
+                    new_password: newPassword
+                }),
+                contentType: 'application/json',
+                success: function (response) {
+                    if (response.token) {
+                        localStorage.setItem('token', response.token);
+                    }
+                    $('#formChangePassword')[0].reset();
+                    Swal.fire('Password Updated', response.message || 'Password changed successfully.', 'success');
+                },
+                error: function (xhr) {
+                    let msg = 'Could not change password.';
+                    if (xhr.responseJSON) {
+                        msg = Object.keys(xhr.responseJSON).map(key => `${key}: ${xhr.responseJSON[key]}`).join('<br>');
+                    }
+                    Swal.fire('Password Change Failed', msg, 'error');
+                }
+            });
+        });
+    }
+
+    // ==================== TEMPLATES MODULE ====================
+    let globalTemplates = [];
+
+    function loadTemplates(callback, shouldRender = true) {
+        if (shouldRender) {
+            setTableMessage('#tableTemplates', 'Loading templates...', 4);
+        }
+
+        $.ajax({
+            url: API_BASE + 'templates/',
+            type: 'GET',
+            success: function (data) {
+                globalTemplates = data;
+                if (shouldRender) {
+                    renderTemplatesTable(data);
+                }
+                populateEmailTemplateDropdown();
+                if (callback) callback(data);
+            },
+            error: function () {
+                Swal.fire('Error', 'Failed to retrieve email templates.', 'error');
+            }
+        });
+    }
+
+    function renderTemplatesTable(templates) {
+        const table = getDataTable('#tableTemplates');
+        table.clear();
+
+        const list = templates || globalTemplates;
+
+        if (list.length === 0) {
+            table.row.add([
+                '<span class="text-muted">No templates available.</span>',
+                '',
+                '',
+                ''
+            ]);
+            table.draw();
+            populateEmailTemplateDropdown();
+            return;
+        }
+
+        list.forEach(template => {
+            const formattedDate = template.updated_at ? new Date(template.updated_at).toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric'
+            }) : '--';
+
+            const actionButtons = `
                     <div class="d-flex gap-2">
                         <button class="btn btn-light btn-sm px-2 py-1 border text-primary" onclick="openEditTemplateModal('${template.id}')">
                             <i data-lucide="edit-3" style="width:14px;height:14px;"></i> Edit
@@ -466,523 +466,519 @@
                     </div>
                 `;
 
-                table.row.add([
-                    `<span class="fw-semibold">${template.title}</span>`,
-                    `<span class="mono">${template.subject}</span>`,
-                    `<span class="mono">${formattedDate}</span>`,
-                    actionButtons
-                ]);
-            });
+            table.row.add([
+                `<span class="fw-semibold">${template.title}</span>`,
+                `<span class="mono">${template.subject}</span>`,
+                `<span class="mono">${formattedDate}</span>`,
+                actionButtons
+            ]);
+        });
 
-            table.draw();
-            table.columns.adjust();
-            populateEmailTemplateDropdown();
-            lucide.createIcons();
-        }
+        table.draw();
+        table.columns.adjust();
+        populateEmailTemplateDropdown();
+        lucide.createIcons();
+    }
 
-        function populateEmailTemplateDropdown() {
-            const selectedValue = $('#emailTemplate').val();
-            const options = ['<option value="">Select Template</option>'];
-            globalTemplates.forEach(template => {
-                options.push(`<option value="${template.id}">${template.title}</option>`);
-            });
-            $('#emailTemplate').html(options.join('')).val(selectedValue || '');
-        }
+    function populateEmailTemplateDropdown() {
+        const selectedValue = $('#emailTemplate').val();
+        const options = ['<option value="">Select Template</option>'];
+        globalTemplates.forEach(template => {
+            options.push(`<option value="${template.id}">${template.title}</option>`);
+        });
+        $('#emailTemplate').html(options.join('')).val(selectedValue || '');
+    }
 
-        function openCreateTemplateModal() {
-            $('#templateModalTitle').text('Construct Base Transmission Content Template');
-            $('#templateId').val('');
-            $('#formAddTemplate')[0].reset();
-        }
+    function openCreateTemplateModal() {
+        $('#templateModalTitle').text('Construct Base Transmission Content Template');
+        $('#templateId').val('');
+        $('#formAddTemplate')[0].reset();
+    }
 
-        function openEditTemplateModal(id) {
-            const template = globalTemplates.find(t => t.id == id);
-            if (!template) return;
+    function openEditTemplateModal(id) {
+        const template = globalTemplates.find(t => t.id == id);
+        if (!template) return;
 
-            $('#templateModalTitle').text('Edit Content Template');
-            $('#templateId').val(template.id);
-            $('#templateTitle').val(template.title);
-            $('#templateSubject').val(template.subject);
-            $('#templateMessage').val(template.message);
-            $('#modalTemplate').modal('show');
-        }
+        $('#templateModalTitle').text('Edit Content Template');
+        $('#templateId').val(template.id);
+        $('#templateTitle').val(template.title);
+        $('#templateSubject').val(template.subject);
+        $('#templateMessage').val(template.message);
+        $('#modalTemplate').modal('show');
+    }
 
-        function setupTemplateHandlers() {
-            $('#modalTemplate').on('show.bs.modal', function() {
-                if (!$('#templateId').val()) {
-                    openCreateTemplateModal();
-                }
-            });
-
-            $('#formAddTemplate').on('submit', function(e) {
-                e.preventDefault();
-                const id = $('#templateId').val();
-                const title = $('#templateTitle').val().trim();
-                const subject = $('#templateSubject').val().trim();
-                const message = $('#templateMessage').val().trim();
-
-                if (!title || !subject || !message) {
-                    Swal.fire('Missing Details', 'Template title, subject, and message are required.', 'warning');
-                    return;
-                }
-
-                const payload = {
-                    title: title,
-                    subject: subject,
-                    message: message
-                };
-
-                const url = id ? `${API_BASE}templates/${id}/` : `${API_BASE}templates/`;
-                const type = id ? 'PUT' : 'POST';
-
-                $.ajax({
-                    url: url,
-                    type: type,
-                    data: JSON.stringify(payload),
-                    contentType: 'application/json',
-                    success: function() {
-                        Swal.fire(
-                            id ? 'Template Updated' : 'Template Saved',
-                            id ? 'Template details updated successfully.' : 'New email template is now available.',
-                            'success'
-                        );
-                        $('#modalTemplate').modal('hide');
-                        $('#formAddTemplate')[0].reset();
-                        loadTemplates();
-                    },
-                    error: function() {
-                        Swal.fire('Error', 'Failed to save the template.', 'error');
-                    }
-                });
-            });
-        }
-
-        function deleteTemplate(id) {
-            Swal.fire({
-                title: 'Are you sure?',
-                text: 'Do you want to delete this template?',
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#d33',
-                confirmButtonText: 'Yes, delete it!'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    $.ajax({
-                        url: `${API_BASE}templates/${id}/`,
-                        type: 'DELETE',
-                        success: function() {
-                            Swal.fire('Deleted', 'Template removed.', 'success');
-                            loadTemplates();
-                        },
-                        error: function() {
-                            Swal.fire('Error', 'Failed to delete template.', 'error');
-                        }
-                    });
-                }
-            });
-        }
-
-        // ==================== DEPARTMENTS MODULE ====================
-        let globalDepartments = [];
-        
-        function loadDepartments(callback, shouldRender = true) {
-            if (shouldRender) {
-                setTableMessage('#tableDepts', 'Loading departments...', 4);
+    function setupTemplateHandlers() {
+        $('#modalTemplate').on('show.bs.modal', function () {
+            if (!$('#templateId').val()) {
+                openCreateTemplateModal();
             }
+        });
 
-            $.ajax({
-                url: API_BASE + 'departments/',
-                type: 'GET',
-                success: function(data) {
-                    globalDepartments = data;
-                    if (shouldRender) {
-                        loadDepartmentHeadcounts(function() {
-                            renderDepartmentsTable(data);
-                        });
-                    }
-                    populateDeptSelects(data);
-                    if (callback) callback(data);
-                },
-                error: function() {
-                    Swal.fire('Error', 'Failed to retrieve department records.', 'error');
-                }
-            });
-        }
+        $('#formAddTemplate').on('submit', function (e) {
+            e.preventDefault();
+            const id = $('#templateId').val();
+            const title = $('#templateTitle').val().trim();
+            const subject = $('#templateSubject').val().trim();
+            const message = $('#templateMessage').val().trim();
 
-        function loadDepartmentHeadcounts(callback) {
-            $.ajax({
-                url: API_BASE + 'employees/',
-                type: 'GET',
-                success: function(data) {
-                    globalEmployees = data;
-                    if (callback) callback(data);
-                },
-                error: function() {
-                    globalEmployees = [];
-                    if (callback) callback([]);
-                }
-            });
-        }
-
-        function renderDepartmentsTable(departments) {
-            const table = getDataTable('#tableDepts');
-            table.clear();
-
-            if (departments.length === 0) {
-                table.row.add([
-                    '<span class="text-muted">No departments found.</span>',
-                    '',
-                    '',
-                    ''
-                ]);
-                table.draw();
+            if (!title || !subject || !message) {
+                Swal.fire('Missing Details', 'Template title, subject, and message are required.', 'warning');
                 return;
             }
 
-            const makeRoutingCode = (name) => {
-                const cleanName = (name || 'Department').toLowerCase().trim();
-                const slug = cleanName
-                    .replace(/&/g, 'and')
-                    .replace(/[^a-z0-9]+/g, '-')
-                    .replace(/^-+|-+$/g, '')
-                    .toUpperCase();
-                return `DEPT-${slug || 'GENERAL'}`;
+            const payload = {
+                title: title,
+                subject: subject,
+                message: message
             };
 
-            const sortedDepartments = [...departments].sort((a, b) => {
-                return a.department_name.localeCompare(b.department_name);
-            });
+            const url = id ? `${API_BASE}templates/${id}/` : `${API_BASE}templates/`;
+            const type = id ? 'PUT' : 'POST';
 
-            sortedDepartments.forEach(dept => {
-                const headcount = globalEmployees.filter(emp => Number(emp.department) === Number(dept.id)).length;
-                const actionBtn = `<button class="btn btn-light text-danger btn-sm px-2 py-1 border" onclick="deleteDepartment(${dept.id})"><i data-lucide="trash-2" style="width:14px;"></i></button>`;
-                table.row.add([
-                    `<span class="fw-semibold">${dept.department_name}</span>`,
-                    `${headcount} ${headcount === 1 ? 'Member' : 'Members'}`,
-                    `<code>${makeRoutingCode(dept.department_name)}</code>`,
-                    actionBtn
-                ]);
-            });
-            table.draw();
-            table.columns.adjust();
-            lucide.createIcons();
-        }
-
-        function populateDeptSelects(departments) {
-            const selectedDepartment = $('#empDepartment').val();
-            const selectOptions = ['<option value="">Select Department</option>'];
-            departments.forEach(dept => {
-                selectOptions.push(`<option value="${dept.id}">${dept.department_name}</option>`);
-            });
-            $('#empDepartment').html(selectOptions.join(''));
-            if (selectedDepartment) {
-                $('#empDepartment').val(selectedDepartment);
-            }
-            
-            // Also update the send email department filters dropdown
-            const filterDropdown = $('#view-send-email .dropdown-menu');
-            let filterHtml = '<li><a class="dropdown-item dept-filter" href="#" data-dept="all">All Departments</a></li>';
-            departments.forEach(dept => {
-                filterHtml += `<li><a class="dropdown-item dept-filter" href="#" data-dept="${dept.id}">${dept.department_name}</a></li>`;
-            });
-            filterDropdown.html(filterHtml);
-            
-            // Re-apply filter click listeners
-            $('.dept-filter').on('click', function(e) {
-                e.preventDefault();
-                const deptId = $(this).data('dept');
-                const label = $(this).text().trim();
-                filterEmailEmployeeList(deptId);
-                updateSendEmailFilterLabel(label);
-            });
-        }
-
-        function deleteDepartment(id) {
-            Swal.fire({
-                title: 'Are you sure?',
-                text: 'You cannot undo this action.',
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#d33',
-                cancelButtonText: 'Cancel',
-                confirmButtonText: 'Delete'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    $.ajax({
-                        url: API_BASE + `departments/${id}/`,
-                        type: 'DELETE',
-                        success: function() {
-                            Swal.fire('Deleted!', 'Department deleted successfully.', 'success');
-                            loadDepartments();
-                        },
-                        error: function(xhr) {
-                            Swal.fire('Delete Failed', 'This department contains active employee mappings.', 'error');
-                        }
-                    });
+            $.ajax({
+                url: url,
+                type: type,
+                data: JSON.stringify(payload),
+                contentType: 'application/json',
+                success: function () {
+                    Swal.fire(
+                        id ? 'Template Updated' : 'Template Saved',
+                        id ? 'Template details updated successfully.' : 'New email template is now available.',
+                        'success'
+                    );
+                    $('#modalTemplate').modal('hide');
+                    $('#formAddTemplate')[0].reset();
+                    loadTemplates();
+                },
+                error: function () {
+                    Swal.fire('Error', 'Failed to save the template.', 'error');
                 }
             });
-        }
+        });
+    }
 
-        // ==================== EMPLOYEES MODULE ====================
-        let globalEmployees = [];
-
-        function loadEmployees() {
-            setTableMessage('#tableEmployees', 'Loading employees...', 5);
-
-            $.when(
-                $.ajax({ url: API_BASE + 'departments/', type: 'GET' }),
-                $.ajax({ url: API_BASE + 'employees/', type: 'GET' })
-            ).done(function(departmentResponse, employeeResponse) {
-                globalDepartments = departmentResponse[0];
-                globalEmployees = employeeResponse[0];
-                populateDeptSelects(globalDepartments);
-                renderEmployeesTable(globalEmployees);
-            }).fail(function() {
-                Swal.fire('Error', 'Failed to retrieve employee directory.', 'error');
-            });
-        }
-
-        function renderEmployeesTable(employees) {
-            const table = getDataTable('#tableEmployees');
-            table.clear();
-
-            if (employees.length === 0) {
-                table.row.add([
-                    '<span class="text-muted">No employees found.</span>',
-                    '',
-                    '',
-                    '',
-                    ''
-                ]);
-                table.draw();
-                populateEmployeeFilters();
-                return;
+    function deleteTemplate(id) {
+        Swal.fire({
+            title: 'Are you sure?',
+            text: 'Do you want to delete this template?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            confirmButtonText: 'Yes, delete it!'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: `${API_BASE}templates/${id}/`,
+                    type: 'DELETE',
+                    success: function () {
+                        Swal.fire('Deleted', 'Template removed.', 'success');
+                        loadTemplates();
+                    },
+                    error: function () {
+                        Swal.fire('Error', 'Failed to delete template.', 'error');
+                    }
+                });
             }
+        });
+    }
 
-            employees.forEach(emp => {
-                const fullName = `${emp.first_name} ${emp.last_name}`;
-                const deptName = emp.department_name || 'Unassigned';
-                const statusBadge = emp.status ? 
-                    `<span class="badge bg-success-subtle text-success">Active</span>` : 
-                    `<span class="badge bg-secondary-subtle text-secondary">Inactive</span>`;
-                
-                const actionBtns = `
+    // ==================== DEPARTMENTS MODULE ====================
+    let globalDepartments = [];
+
+    function loadDepartments(callback, shouldRender = true) {
+        // SWR caching: If we have cached departments, render immediately without locking the UI
+        if (globalDepartments.length > 0 && shouldRender) {
+            renderDepartmentsTable(globalDepartments);
+        } else if (shouldRender) {
+            setTableMessage('#tableDepts', 'Loading departments...', 4);
+        }
+
+        // Fetch departments and employees in parallel to compute headcount in one round-trip
+        $.when(
+            $.ajax({ url: API_BASE + 'departments/', type: 'GET' }),
+            $.ajax({ url: API_BASE + 'employees/', type: 'GET' })
+        ).done(function (deptRes, empRes) {
+            globalDepartments = deptRes[0];
+            globalEmployees = empRes[0];
+            populateDeptSelects(globalDepartments);
+            if (shouldRender) {
+                renderDepartmentsTable(globalDepartments);
+            }
+            if (callback) callback(globalDepartments);
+        }).fail(function () {
+            if (globalDepartments.length === 0) {
+                Swal.fire('Error', 'Failed to retrieve department records.', 'error');
+            }
+        });
+    }
+
+    function renderDepartmentsTable(departments) {
+        const table = getDataTable('#tableDepts');
+        table.clear();
+
+        if (departments.length === 0) {
+            table.row.add([
+                '<span class="text-muted">No departments found.</span>',
+                '',
+                '',
+                ''
+            ]);
+            table.draw();
+            return;
+        }
+
+        const makeRoutingCode = (name) => {
+            const cleanName = (name || 'Department').toLowerCase().trim();
+            const slug = cleanName
+                .replace(/&/g, 'and')
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-+|-+$/g, '')
+                .toUpperCase();
+            return `DEPT-${slug || 'GENERAL'}`;
+        };
+
+        const sortedDepartments = [...departments].sort((a, b) => {
+            return a.department_name.localeCompare(b.department_name);
+        });
+
+        sortedDepartments.forEach(dept => {
+            const headcount = globalEmployees.filter(emp => Number(emp.department) === Number(dept.id)).length;
+            const actionBtn = `<button class="btn btn-light text-danger btn-sm px-2 py-1 border" onclick="deleteDepartment(${dept.id})"><i data-lucide="trash-2" style="width:14px;"></i></button>`;
+            table.row.add([
+                `<span class="fw-semibold">${dept.department_name}</span>`,
+                `${headcount} ${headcount === 1 ? 'Member' : 'Members'}`,
+                `<code>${makeRoutingCode(dept.department_name)}</code>`,
+                actionBtn
+            ]);
+        });
+        table.draw();
+        table.columns.adjust();
+        lucide.createIcons();
+    }
+
+    function populateDeptSelects(departments) {
+        const selectedDepartment = $('#empDepartment').val();
+        const selectOptions = ['<option value="">Select Department</option>'];
+        departments.forEach(dept => {
+            selectOptions.push(`<option value="${dept.id}">${dept.department_name}</option>`);
+        });
+        $('#empDepartment').html(selectOptions.join(''));
+        if (selectedDepartment) {
+            $('#empDepartment').val(selectedDepartment);
+        }
+
+        // Also update the send email department filters dropdown
+        const filterDropdown = $('#view-send-email .dropdown-menu');
+        let filterHtml = '<li><a class="dropdown-item dept-filter" href="#" data-dept="all">All Departments</a></li>';
+        departments.forEach(dept => {
+            filterHtml += `<li><a class="dropdown-item dept-filter" href="#" data-dept="${dept.id}">${dept.department_name}</a></li>`;
+        });
+        filterDropdown.html(filterHtml);
+
+        // Re-apply filter click listeners
+        $('.dept-filter').on('click', function (e) {
+            e.preventDefault();
+            const deptId = $(this).data('dept');
+            const label = $(this).text().trim();
+            filterEmailEmployeeList(deptId);
+            updateSendEmailFilterLabel(label);
+        });
+    }
+
+    function deleteDepartment(id) {
+        Swal.fire({
+            title: 'Are you sure?',
+            text: 'You cannot undo this action.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonText: 'Cancel',
+            confirmButtonText: 'Delete'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: API_BASE + `departments/${id}/`,
+                    type: 'DELETE',
+                    success: function () {
+                        Swal.fire('Deleted!', 'Department deleted successfully.', 'success');
+                        loadDepartments();
+                    },
+                    error: function (xhr) {
+                        Swal.fire('Delete Failed', 'This department contains active employee mappings.', 'error');
+                    }
+                });
+            }
+        });
+    }
+
+    // ==================== EMPLOYEES MODULE ====================
+    let globalEmployees = [];
+
+    function loadEmployees() {
+        // SWR caching: If we have cached employees, render immediately without locking the UI
+        if (globalEmployees.length > 0) {
+            populateDeptSelects(globalDepartments);
+            renderEmployeesTable(globalEmployees);
+        } else {
+            setTableMessage('#tableEmployees', 'Loading employees...', 5);
+        }
+
+        $.when(
+            $.ajax({ url: API_BASE + 'departments/', type: 'GET' }),
+            $.ajax({ url: API_BASE + 'employees/', type: 'GET' })
+        ).done(function (departmentResponse, employeeResponse) {
+            globalDepartments = departmentResponse[0];
+            globalEmployees = employeeResponse[0];
+            populateDeptSelects(globalDepartments);
+            renderEmployeesTable(globalEmployees);
+        }).fail(function () {
+            if (globalEmployees.length === 0) {
+                Swal.fire('Error', 'Failed to retrieve employee directory.', 'error');
+            }
+        });
+    }
+
+    function renderEmployeesTable(employees) {
+        const table = getDataTable('#tableEmployees');
+        table.clear();
+
+        if (employees.length === 0) {
+            table.row.add([
+                '<span class="text-muted">No employees found.</span>',
+                '',
+                '',
+                '',
+                ''
+            ]);
+            table.draw();
+            populateEmployeeFilters();
+            return;
+        }
+
+        employees.forEach(emp => {
+            const fullName = `${emp.first_name} ${emp.last_name}`;
+            const deptName = emp.department_name || 'Unassigned';
+            const statusBadge = emp.status ?
+                `<span class="badge bg-success-subtle text-success">Active</span>` :
+                `<span class="badge bg-secondary-subtle text-secondary">Inactive</span>`;
+
+            const actionBtns = `
                     <button class="btn btn-light btn-sm px-2 py-1 border" onclick="editEmployee(${emp.id})"><i data-lucide="edit-3" style="width:14px;"></i></button>
                     <button class="btn btn-light text-danger btn-sm px-2 py-1 border" onclick="deleteEmployee(${emp.id})"><i data-lucide="trash-2" style="width:14px;"></i></button>
                 `;
 
-                table.row.add([
-                    `<div class="fw-semibold">${fullName}</div><small class="text-muted">ID: ${emp.employee_id}</small><span class="d-none">${emp.status ? 'Active' : 'Pending'}</span>`,
-                    emp.email,
-                    emp.phone,
-                    `<span class="badge bg-light text-dark">${deptName}</span>`,
-                    actionBtns
-                ]);
-            });
-            table.draw();
-            table.columns.adjust();
-            lucide.createIcons();
-            populateEmployeeFilters();
-            applyEmployeeFilters();
-        }
-
-        function populateEmployeeFilters() {
-            const currentDept = $('#filter-emp-dept').val();
-            const options = ['<option value="">All Departments</option>'];
-            globalDepartments.forEach(dept => {
-                options.push(`<option value="${dept.department_name}">${dept.department_name}</option>`);
-            });
-            $('#filter-emp-dept').html(options.join('')).val(currentDept || '');
-        }
-
-        function applyEmployeeFilters() {
-            if (!$.fn.DataTable.isDataTable('#tableEmployees')) return;
-            const table = getDataTable('#tableEmployees');
-            const searchText = $('#filter-emp-search').val() || '';
-            const dept = $('#filter-emp-dept').val() || '';
-            const status = $('#filter-emp-status').val() || '';
-
-            table.search(searchText);
-            table.column(3).search(dept, false, false);
-            table.column(0).search(status, false, false);
-            table.draw();
-        }
-
-        function editEmployee(id) {
-            const emp = globalEmployees.find(e => e.id === id);
-            if (!emp) return;
-
-            // Pre-populate fields in the employee modal form
-            $('#empId').val(emp.id);
-            $('#empEmployeeId').val(emp.employee_id).prop('disabled', true); // ID remains immutable
-            $('#empDepartment').val(emp.department);
-            $('#empFirstName').val(emp.first_name);
-            $('#empLastName').val(emp.last_name);
-            $('#empEmail').val(emp.email);
-            $('#empPhone').val(emp.phone);
-            $('#empDesignation').val(emp.designation);
-            $('#empSalary').val(emp.salary);
-            $('#empJoiningDate').val(emp.joining_date);
-            $('#empStatus').prop('checked', emp.status);
-
-            $('#employeeModalTitle').text('Modify Employee Profile Record');
-            $('#modalEmployee').modal('show');
-        }
-
-        // Reset employee modal parameters when opening for a new entry
-        $('#modalEmployee').on('show.bs.modal', function(e) {
-            const selectedDepartment = $('#empDepartment').val();
-            loadDepartments(function() {
-                if (selectedDepartment) {
-                    $('#empDepartment').val(selectedDepartment);
-                }
-            }, false);
-
-            if (e.relatedTarget) { // Triggered by 'Add New Record' button
-                $('#formAddEmp')[0].reset();
-                $('#empId').val('');
-                $('#empEmployeeId').prop('disabled', false);
-                $('#employeeModalTitle').text('Add New Employee');
-            }
+            table.row.add([
+                `<div class="fw-semibold">${fullName}</div><small class="text-muted">ID: ${emp.employee_id}</small><span class="d-none">${emp.status ? 'Active' : 'Pending'}</span>`,
+                emp.email,
+                emp.phone,
+                `<span class="badge bg-light text-dark">${deptName}</span>`,
+                actionBtns
+            ]);
         });
+        table.draw();
+        table.columns.adjust();
+        lucide.createIcons();
+        populateEmployeeFilters();
+        applyEmployeeFilters();
+    }
 
-        function deleteEmployee(id) {
-            Swal.fire({
-                title: 'Delete Employee Record?',
-                text: 'This operation will remove the employee from directory lists.',
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#d33',
-                confirmButtonText: 'Confirm Delete'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    $.ajax({
-                        url: API_BASE + `employees/${id}/`,
-                        type: 'DELETE',
-                        success: function() {
-                            Swal.fire('Deleted!', 'Employee has been removed.', 'success');
-                            loadEmployees();
-                        },
-                        error: function() {
-                            Swal.fire('Error', 'Could not delete employee record.', 'error');
-                        }
-                    });
-                }
-            });
+    function populateEmployeeFilters() {
+        const currentDept = $('#filter-emp-dept').val();
+        const options = ['<option value="">All Departments</option>'];
+        globalDepartments.forEach(dept => {
+            options.push(`<option value="${dept.department_name}">${dept.department_name}</option>`);
+        });
+        $('#filter-emp-dept').html(options.join('')).val(currentDept || '');
+    }
+
+    function applyEmployeeFilters() {
+        if (!$.fn.DataTable.isDataTable('#tableEmployees')) return;
+        const table = getDataTable('#tableEmployees');
+        const searchText = $('#filter-emp-search').val() || '';
+        const dept = $('#filter-emp-dept').val() || '';
+        const status = $('#filter-emp-status').val() || '';
+
+        table.search(searchText);
+        table.column(3).search(dept, false, false);
+        table.column(0).search(status, false, false);
+        table.draw();
+    }
+
+    function editEmployee(id) {
+        const emp = globalEmployees.find(e => e.id === id);
+        if (!emp) return;
+
+        // Pre-populate fields in the employee modal form
+        $('#empId').val(emp.id);
+        $('#empEmployeeId').val(emp.employee_id).prop('disabled', true); // ID remains immutable
+        $('#empDepartment').val(emp.department);
+        $('#empFirstName').val(emp.first_name);
+        $('#empLastName').val(emp.last_name);
+        $('#empEmail').val(emp.email);
+        $('#empPhone').val(emp.phone);
+        $('#empDesignation').val(emp.designation);
+        $('#empSalary').val(emp.salary);
+        $('#empJoiningDate').val(emp.joining_date);
+        $('#empStatus').prop('checked', emp.status);
+
+        $('#employeeModalTitle').text('Modify Employee Profile Record');
+        $('#modalEmployee').modal('show');
+    }
+
+    // Reset employee modal parameters when opening for a new entry
+    $('#modalEmployee').on('show.bs.modal', function (e) {
+        const selectedDepartment = $('#empDepartment').val();
+        loadDepartments(function () {
+            if (selectedDepartment) {
+                $('#empDepartment').val(selectedDepartment);
+            }
+        }, false);
+
+        if (e.relatedTarget) { // Triggered by 'Add New Record' button
+            $('#formAddEmp')[0].reset();
+            $('#empId').val('');
+            $('#empEmployeeId').prop('disabled', false);
+            $('#employeeModalTitle').text('Add New Employee');
         }
+    });
 
-        // ==================== FORM SUBMISSIONS ====================
-        function setupFormSubmissions() {
-            // Employee creation/updates
-            $('#formAddEmp').on('submit', function(e) {
-                e.preventDefault();
-                const id = $('#empId').val();
-                
-                const payload = {
-                    employee_id: $('#empEmployeeId').val(),
-                    department: parseInt($('#empDepartment').val()),
-                    first_name: $('#empFirstName').val(),
-                    last_name: $('#empLastName').val(),
-                    email: $('#empEmail').val(),
-                    phone: $('#empPhone').val(),
-                    designation: $('#empDesignation').val(),
-                    salary: parseFloat($('#empSalary').val()),
-                    joining_date: $('#empJoiningDate').val(),
-                    status: $('#empStatus').is(':checked')
-                };
-
-                const url = id ? API_BASE + `employees/${id}/` : API_BASE + 'employees/';
-                const type = id ? 'PUT' : 'POST';
-
+    function deleteEmployee(id) {
+        Swal.fire({
+            title: 'Delete Employee Record?',
+            text: 'This operation will remove the employee from directory lists.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            confirmButtonText: 'Confirm Delete'
+        }).then((result) => {
+            if (result.isConfirmed) {
                 $.ajax({
-                    url: url,
-                    type: type,
-                    data: JSON.stringify(payload),
-                    contentType: 'application/json',
-                    success: function() {
-                        $('#modalEmployee').modal('hide');
-                        Swal.fire('Success', id ? 'Employee record updated.' : 'Employee mapped successfully.', 'success');
+                    url: API_BASE + `employees/${id}/`,
+                    type: 'DELETE',
+                    success: function () {
+                        Swal.fire('Deleted!', 'Employee has been removed.', 'success');
                         loadEmployees();
                     },
-                    error: function(xhr) {
-                        let msg = 'Validation constraints violation occurred.';
-                        if (xhr.responseJSON) {
-                            msg = Object.keys(xhr.responseJSON).map(key => `${key}: ${xhr.responseJSON[key]}`).join('<br>');
-                        }
-                        Swal.fire('Error', msg, 'error');
+                    error: function () {
+                        Swal.fire('Error', 'Could not delete employee record.', 'error');
                     }
                 });
-            });
-
-            // Department creation
-            $('#formAddDept').on('submit', function(e) {
-                e.preventDefault();
-                const payload = {
-                    department_name: $('#deptName').val(),
-                    description: $('#deptDescription').val()
-                };
-
-                $.ajax({
-                    url: API_BASE + 'departments/',
-                    type: 'POST',
-                    data: JSON.stringify(payload),
-                    contentType: 'application/json',
-                    success: function() {
-                        $('#modalDept').modal('hide');
-                        $('#formAddDept')[0].reset();
-                        Swal.fire('Created', 'New operational unit provisioned successfully.', 'success');
-                        loadDepartments();
-                    },
-                    error: function(xhr) {
-                        let msg = 'Validation error occurred.';
-                        if (xhr.responseJSON) {
-                            msg = Object.keys(xhr.responseJSON).map(key => `${key}: ${xhr.responseJSON[key]}`).join('<br>');
-                        }
-                        Swal.fire('Failed', msg, 'error');
-                    }
-                });
-            });
-        }
-
-        // ==================== SEND EMAIL MODULE ====================
-        let currentFilterDeptId = 'all';
-
-        function loadSendEmailPanel() {
-            // Load templates and populate employee target panels
-            $('#view-send-email .recipient-list').html('<div class="text-center text-muted py-4">Loading employees...</div>');
-            updateSendEmailFilterLabel('All Departments');
-
-            $.when(
-                $.ajax({ url: API_BASE + 'departments/', type: 'GET' }),
-                $.ajax({ url: API_BASE + 'employees/', type: 'GET' }),
-                $.ajax({ url: API_BASE + 'templates/', type: 'GET' })
-            ).done(function(departmentResponse, employeeResponse, templateResponse) {
-                globalDepartments = departmentResponse[0];
-                globalEmployees = employeeResponse[0];
-                globalTemplates = templateResponse[0];
-                populateDeptSelects(globalDepartments);
-                populateEmailTemplateDropdown();
-                renderSendEmailEmployeeList(globalEmployees);
-            }).fail(function() {
-                Swal.fire('Error', 'Failed to load email panel data.', 'error');
-            });
-        }
-
-        function renderSendEmailEmployeeList(employees) {
-            const container = $('#view-send-email .recipient-list');
-            container.empty();
-
-            if (employees.length === 0) {
-                container.html('<div class="text-center text-muted py-4">No employees registered.</div>');
-                return;
             }
+        });
+    }
 
-            employees.forEach(emp => {
-                const isSelected = selectedEmployeeIds.includes(emp.id) ? 'checked' : '';
-                const selectedClass = isSelected ? 'selected-active' : '';
-                const deptName = emp.department_name || 'Unassigned';
-                
-                const card = `
+    // ==================== FORM SUBMISSIONS ====================
+    function setupFormSubmissions() {
+        // Employee creation/updates
+        $('#formAddEmp').on('submit', function (e) {
+            e.preventDefault();
+            const id = $('#empId').val();
+
+            const payload = {
+                employee_id: $('#empEmployeeId').val(),
+                department: parseInt($('#empDepartment').val()),
+                first_name: $('#empFirstName').val(),
+                last_name: $('#empLastName').val(),
+                email: $('#empEmail').val(),
+                phone: $('#empPhone').val(),
+                designation: $('#empDesignation').val(),
+                salary: parseFloat($('#empSalary').val()),
+                joining_date: $('#empJoiningDate').val(),
+                status: $('#empStatus').is(':checked')
+            };
+
+            const url = id ? API_BASE + `employees/${id}/` : API_BASE + 'employees/';
+            const type = id ? 'PUT' : 'POST';
+
+            $.ajax({
+                url: url,
+                type: type,
+                data: JSON.stringify(payload),
+                contentType: 'application/json',
+                success: function () {
+                    $('#modalEmployee').modal('hide');
+                    Swal.fire('Success', id ? 'Employee record updated.' : 'Employee mapped successfully.', 'success');
+                    loadEmployees();
+                },
+                error: function (xhr) {
+                    let msg = 'Validation constraints violation occurred.';
+                    if (xhr.responseJSON) {
+                        msg = Object.keys(xhr.responseJSON).map(key => `${key}: ${xhr.responseJSON[key]}`).join('<br>');
+                    }
+                    Swal.fire('Error', msg, 'error');
+                }
+            });
+        });
+
+        // Department creation
+        $('#formAddDept').on('submit', function (e) {
+            e.preventDefault();
+            const payload = {
+                department_name: $('#deptName').val(),
+                description: $('#deptDescription').val()
+            };
+
+            $.ajax({
+                url: API_BASE + 'departments/',
+                type: 'POST',
+                data: JSON.stringify(payload),
+                contentType: 'application/json',
+                success: function () {
+                    $('#modalDept').modal('hide');
+                    $('#formAddDept')[0].reset();
+                    Swal.fire('Created', 'New operational unit provisioned successfully.', 'success');
+                    loadDepartments();
+                },
+                error: function (xhr) {
+                    let msg = 'Validation error occurred.';
+                    if (xhr.responseJSON) {
+                        msg = Object.keys(xhr.responseJSON).map(key => `${key}: ${xhr.responseJSON[key]}`).join('<br>');
+                    }
+                    Swal.fire('Failed', msg, 'error');
+                }
+            });
+        });
+    }
+
+    // ==================== SEND EMAIL MODULE ====================
+    let currentFilterDeptId = 'all';
+
+    function loadSendEmailPanel() {
+        // Load templates and populate employee target panels
+        $('#view-send-email .recipient-list').html('<div class="text-center text-muted py-4">Loading employees...</div>');
+        updateSendEmailFilterLabel('All Departments');
+
+        $.when(
+            $.ajax({ url: API_BASE + 'departments/', type: 'GET' }),
+            $.ajax({ url: API_BASE + 'employees/', type: 'GET' }),
+            $.ajax({ url: API_BASE + 'templates/', type: 'GET' })
+        ).done(function (departmentResponse, employeeResponse, templateResponse) {
+            globalDepartments = departmentResponse[0];
+            globalEmployees = employeeResponse[0];
+            globalTemplates = templateResponse[0];
+            populateDeptSelects(globalDepartments);
+            populateEmailTemplateDropdown();
+            renderSendEmailEmployeeList(globalEmployees);
+        }).fail(function () {
+            Swal.fire('Error', 'Failed to load email panel data.', 'error');
+        });
+    }
+
+    function renderSendEmailEmployeeList(employees) {
+        const container = $('#view-send-email .recipient-list');
+        container.empty();
+
+        if (employees.length === 0) {
+            container.html('<div class="text-center text-muted py-4">No employees registered.</div>');
+            return;
+        }
+
+        employees.forEach(emp => {
+            const isSelected = selectedEmployeeIds.includes(emp.id) ? 'checked' : '';
+            const selectedClass = isSelected ? 'selected-active' : '';
+            const deptName = emp.department_name || 'Unassigned';
+
+            const card = `
                     <div class="card employee-card p-3 rounded-4 ${selectedClass}" data-dept="${emp.department}">
                         <div class="d-flex">
                             <input type="checkbox" class="form-check-input employee-checkbox me-3 mt-1" data-id="${emp.id}" ${isSelected}>
@@ -996,281 +992,290 @@
                         </div>
                     </div>
                 `;
-                container.append(card);
-            });
+            container.append(card);
+        });
 
-            // Re-apply event listeners for checkboxes
-            $('.employee-checkbox').on('change', function() {
-                const id = parseInt($(this).data('id'));
-                const card = $(this).closest('.employee-card');
-                if ($(this).is(':checked')) {
-                    if (!selectedEmployeeIds.includes(id)) selectedEmployeeIds.push(id);
-                    card.addClass('selected-active');
-                } else {
-                    selectedEmployeeIds = selectedEmployeeIds.filter(x => x !== id);
-                    card.removeClass('selected-active');
-                }
-                updateSelectedCountUI();
-            });
-
+        // Re-apply event listeners for checkboxes
+        $('.employee-checkbox').on('change', function () {
+            const id = parseInt($(this).data('id'));
+            const card = $(this).closest('.employee-card');
+            if ($(this).is(':checked')) {
+                if (!selectedEmployeeIds.includes(id)) selectedEmployeeIds.push(id);
+                card.addClass('selected-active');
+            } else {
+                selectedEmployeeIds = selectedEmployeeIds.filter(x => x !== id);
+                card.removeClass('selected-active');
+            }
             updateSelectedCountUI();
-        }
+        });
 
-        let selectedEmployeeIds = [];
+        updateSelectedCountUI();
+    }
 
-        function updateSelectedCountUI() {
-            $('#selectedCount').text(`${selectedEmployeeIds.length} selected`);
-        }
+    let selectedEmployeeIds = [];
 
-        function updateSendEmailFilterLabel(label) {
-            const selectedLabel = label || 'All Departments';
-            $('#sendEmailFilterBtn').text(`Filter: ${selectedLabel}`);
-        }
+    function updateSelectedCountUI() {
+        $('#selectedCount').text(`${selectedEmployeeIds.length} selected`);
+    }
 
-        function filterEmailEmployeeList(deptId) {
-            currentFilterDeptId = deptId;
+    function updateSendEmailFilterLabel(label) {
+        const selectedLabel = label || 'All Departments';
+        $('#sendEmailFilterBtn').text(`Filter: ${selectedLabel}`);
+    }
+
+    function filterEmailEmployeeList(deptId) {
+        currentFilterDeptId = deptId;
+        applySendEmailFilters();
+    }
+
+    function applySendEmailFilters() {
+        const searchText = ($('#employeeSearch').val() || '').toLowerCase();
+        const deptId = currentFilterDeptId;
+
+        $('.employee-card').each(function () {
+            const name = ($(this).find('.employee-name').text() || '').toLowerCase();
+            const email = ($(this).find('.employee-email').text() || '').toLowerCase();
+            const matchText = name + ' ' + email;
+            const matchDept = deptId === 'all' || $(this).data('dept') == deptId;
+            $(this).toggle(matchText.indexOf(searchText) > -1 && matchDept);
+        });
+    }
+
+    function setupEmailModuleHandlers() {
+        // Filter search logic
+        $('#employeeSearch').on('keyup', function () {
             applySendEmailFilters();
-        }
+        });
 
-        function applySendEmailFilters() {
-            const searchText = ($('#employeeSearch').val() || '').toLowerCase();
-            const deptId = currentFilterDeptId;
-
-            $('.employee-card').each(function() {
-                const name = ($(this).find('.employee-name').text() || '').toLowerCase();
-                const email = ($(this).find('.employee-email').text() || '').toLowerCase();
-                const matchText = name + ' ' + email;
-                const matchDept = deptId === 'all' || $(this).data('dept') == deptId;
-                $(this).toggle(matchText.indexOf(searchText) > -1 && matchDept);
+        // Select all handler
+        $('#selectAllBtn').on('click', function (e) {
+            e.preventDefault();
+            $('.employee-checkbox:visible').each(function () {
+                $(this).prop('checked', true);
+                $(this).closest('.employee-card').addClass('selected-active');
+                const id = parseInt($(this).data('id'));
+                if (!selectedEmployeeIds.includes(id)) selectedEmployeeIds.push(id);
             });
-        }
-
-        function setupEmailModuleHandlers() {
-            // Filter search logic
-            $('#employeeSearch').on('keyup', function() {
-                applySendEmailFilters();
-            });
-
-            // Select all handler
-            $('#selectAllBtn').on('click', function(e) {
-                e.preventDefault();
-                $('.employee-checkbox:visible').each(function() {
-                    $(this).prop('checked', true);
-                    $(this).closest('.employee-card').addClass('selected-active');
-                    const id = parseInt($(this).data('id'));
-                    if (!selectedEmployeeIds.includes(id)) selectedEmployeeIds.push(id);
-                });
-                updateSelectedCountUI();
-            });
-
-            // Clear all handler
-            $('#clearAllBtn').on('click', function(e) {
-                e.preventDefault();
-                $('.employee-checkbox:visible').each(function() {
-                    $(this).prop('checked', false);
-                    $(this).closest('.employee-card').removeClass('selected-active');
-                    const id = parseInt($(this).data('id'));
-                    selectedEmployeeIds = selectedEmployeeIds.filter(x => x !== id);
-                });
-                updateSelectedCountUI();
-            });
-
-            // Template fill listener
-            $('#emailTemplate').on('change', function() {
-                const tpl = parseInt($(this).val() || '0');
-                const template = globalTemplates.find(item => item.id === tpl);
-                const subject = template ? template.subject : '';
-                const message = template ? template.message : '';
-
-                $('#emailSubject').val(subject);
-                $('#emailMessage').val(message);
-            });
-
-            // Form Submit Send Email Action
-            $('#formSendMail').on('submit', function(e) {
-                e.preventDefault();
-                
-                if (selectedEmployeeIds.length === 0) {
-                    Swal.fire('No Targets Selected', 'Please check at least one employee from the list.', 'warning');
-                    return;
-                }
-
-                const baseSubject = $('#emailSubject').val();
-                const baseMessage = $('#emailMessage').val();
-
-                Swal.fire({
-                    title: 'Sending Communications',
-                    text: `Queueing ${selectedEmployeeIds.length} emails. Proceed?`,
-                    icon: 'info',
-                    showCancelButton: true,
-                    confirmButtonText: 'Dispatched Queue',
-                    confirmButtonColor: '#16a34a'
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        sendBatchEmails(baseSubject, baseMessage);
-                    }
-                });
-            });
-        }
-
-        // Loop and trigger individual email dispatches to backend endpoint sequentially
-        async function sendBatchEmails(subjectTpl, messageTpl) {
-            let successCount = 0;
-            const total = selectedEmployeeIds.length;
-
-            Swal.fire({
-                title: 'Processing Dispatch...',
-                html: `Sent <b>0</b> of ${total} records.`,
-                allowOutsideClick: false,
-                didOpen: () => {
-                    Swal.showLoading();
-                }
-            });
-
-            const fileInput = document.getElementById('emailAttachment');
-            const attachmentFile = (fileInput && fileInput.files.length > 0) ? fileInput.files[0] : null;
-
-            for (let i = 0; i < total; i++) {
-                const empId = selectedEmployeeIds[i];
-                const emp = globalEmployees.find(e => e.id === empId);
-                if (!emp) {
-                    updateProgress(i + 1);
-                    continue;
-                }
-
-                // Render dynamic text templates fields logic
-                let renderedSubject = subjectTpl.replace(/{{first_name}}/g, emp.first_name).replace(/{{last_name}}/g, emp.last_name).replace(/{{employee_id}}/g, emp.employee_id);
-                
-                let renderedMessage = messageTpl.replace(/{{first_name}}/g, emp.first_name).replace(/{{last_name}}/g, emp.last_name).replace(/{{employee_id}}/g, emp.employee_id);
-
-                const formData = new FormData();
-                formData.append('employee', emp.id);
-                formData.append('recipient_email', emp.email);
-                formData.append('subject', renderedSubject);
-                formData.append('message', renderedMessage);
-                if (attachmentFile) {
-                    formData.append('attachment', attachmentFile);
-                }
-
-                try {
-                    await $.ajax({
-                        url: API_BASE + 'emails/',
-                        type: 'POST',
-                        data: formData,
-                        processData: false,
-                        contentType: false
-                    });
-                    successCount++;
-                } catch (err) {
-                    console.error("Failed to send email to " + emp.email, err);
-                }
-
-                updateProgress(i + 1);
-            }
-
-            Swal.close();
-            Swal.fire({
-                title: 'Transmission Complete',
-                text: `Successfully dispatched ${successCount} out of ${total} emails.`,
-                icon: successCount === total ? 'success' : 'warning'
-            });
-            
-            // Reset fields
-            selectedEmployeeIds = [];
             updateSelectedCountUI();
-            $('.employee-checkbox').prop('checked', false);
-            $('#formSendMail')[0].reset();
+        });
 
-            function updateProgress(processed) {
-                const b = Swal.getHtmlContainer() ? Swal.getHtmlContainer().querySelector('b') : null;
-                if (b) {
-                    b.textContent = processed;
-                }
-            }
-        }
-
-        // ==================== HISTORY LOGS MODULE ====================
-        function loadHistoryLogs() {
-            setTableMessage('#tableHistory', 'Loading history...', 5);
-
-            $.ajax({
-                url: API_BASE + 'history/',
-                type: 'GET',
-                success: function(data) {
-                    renderHistoryTable(data);
-                },
-                error: function() {
-                    Swal.fire('Error', 'Failed to retrieve audit log history.', 'error');
-                }
+        // Clear all handler
+        $('#clearAllBtn').on('click', function (e) {
+            e.preventDefault();
+            $('.employee-checkbox:visible').each(function () {
+                $(this).prop('checked', false);
+                $(this).closest('.employee-card').removeClass('selected-active');
+                const id = parseInt($(this).data('id'));
+                selectedEmployeeIds = selectedEmployeeIds.filter(x => x !== id);
             });
-        }
+            updateSelectedCountUI();
+        });
 
-        function renderHistoryTable(logs) {
-            const table = getDataTable('#tableHistory', {
-                order: [[3, 'desc']],
-                columnDefs: [
-                    { orderable: false, targets: [4] }
-                ]
-            });
-            table.clear();
+        // Template fill listener
+        $('#emailTemplate').on('change', function () {
+            const tpl = parseInt($(this).val() || '0');
+            const template = globalTemplates.find(item => item.id === tpl);
+            const subject = template ? template.subject : '';
+            const message = template ? template.message : '';
 
-            if (logs.length === 0) {
-                table.row.add([
-                    '<span class="text-muted">No history found.</span>',
-                    '',
-                    '',
-                    '',
-                    ''
-                ]);
-                table.draw();
+            $('#emailSubject').val(subject);
+            $('#emailMessage').val(message);
+        });
+
+        // Form Submit Send Email Action
+        $('#formSendMail').on('submit', function (e) {
+            e.preventDefault();
+
+            if (selectedEmployeeIds.length === 0) {
+                Swal.fire('No Targets Selected', 'Please check at least one employee from the list.', 'warning');
                 return;
             }
 
-            logs.forEach(log => {
-                const formattedTime = log.sent_at ? new Date(log.sent_at).toLocaleString() : '--';
-                const sortableTime = log.sent_at ? `<span class="d-none">${log.sent_at}</span>${formattedTime}` : `<span class="d-none">0000-00-00</span>--`;
-                const stateBadge = log.status === 'Sent' ? 
-                    `<span class="badge bg-success-subtle text-success">Sent</span>` : 
-                    `<span class="badge bg-danger-subtle text-danger">Failed</span>`;
+            const baseSubject = $('#emailSubject').val();
+            const baseMessage = $('#emailMessage').val();
 
-                table.row.add([
-                    `<div class="fw-semibold">${log.recipient_email}</div>`,
-                    `<div class="text-truncate" style="max-width:250px;"><b>${log.subject}</b> - ${log.message}</div>`,
-                    stateBadge,
-                    sortableTime,
-                    `<button class="btn btn-light btn-sm text-primary" onclick="retrySingleLog('${log.recipient_email}', '${log.subject.replace(/'/g, "\\'")}', '${log.message.replace(/'/g, "\\'")}', ${log.employee})"><i data-lucide="refresh-cw" style="width:12px;"></i> Re-send</button>`
-                ]);
-            });
-            table.draw();
-            table.order([[3, 'desc']]).draw();
-            table.columns.adjust();
-            lucide.createIcons();
-        }
-
-        function retrySingleLog(recipientEmail, subject, message, employeeId) {
-            const payload = {
-                employee: employeeId,
-                recipient_email: recipientEmail,
-                subject: subject,
-                message: message
-            };
-
-            $.ajax({
-                url: API_BASE + 'emails/',
-                type: 'POST',
-                data: JSON.stringify(payload),
-                contentType: 'application/json',
-                success: function() {
-                    Swal.fire('Resent Successfully', 'The email has been queued and sent.', 'success');
-                    loadHistoryLogs();
-                },
-                error: function(xhr) {
-                    Swal.fire('Retry Failed', 'An error occurred during re-transmission.', 'error');
+            Swal.fire({
+                title: 'Sending Communications',
+                text: `Queueing ${selectedEmployeeIds.length} emails. Proceed?`,
+                icon: 'info',
+                showCancelButton: true,
+                confirmButtonText: 'Dispatched Queue',
+                confirmButtonColor: '#16a34a'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    sendBatchEmails(baseSubject, baseMessage);
                 }
             });
+        });
+    }
+
+    // Loop and trigger individual email dispatches to backend endpoint sequentially
+    async function sendBatchEmails(subjectTpl, messageTpl) {
+        let successCount = 0;
+        const total = selectedEmployeeIds.length;
+
+        Swal.fire({
+            title: 'Processing Dispatch...',
+            html: `Sent <b>0</b> of ${total} records.`,
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
+        const fileInput = document.getElementById('emailAttachment');
+        const attachmentFile = (fileInput && fileInput.files.length > 0) ? fileInput.files[0] : null;
+
+        for (let i = 0; i < total; i++) {
+            const empId = selectedEmployeeIds[i];
+            const emp = globalEmployees.find(e => e.id === empId);
+            if (!emp) {
+                updateProgress(i + 1);
+                continue;
+            }
+
+            // Render dynamic text templates fields logic
+            let renderedSubject = subjectTpl.replace(/{{first_name}}/g, emp.first_name).replace(/{{last_name}}/g, emp.last_name).replace(/{{employee_id}}/g, emp.employee_id);
+
+            let renderedMessage = messageTpl.replace(/{{first_name}}/g, emp.first_name).replace(/{{last_name}}/g, emp.last_name).replace(/{{employee_id}}/g, emp.employee_id);
+
+            const formData = new FormData();
+            formData.append('employee', emp.id);
+            formData.append('recipient_email', emp.email);
+            formData.append('subject', renderedSubject);
+            formData.append('message', renderedMessage);
+            if (attachmentFile) {
+                formData.append('attachment', attachmentFile);
+            }
+
+            try {
+                await $.ajax({
+                    url: API_BASE + 'emails/',
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false
+                });
+                successCount++;
+            } catch (err) {
+                console.error("Failed to send email to " + emp.email, err);
+            }
+
+            updateProgress(i + 1);
         }
 
-        // Mocks analytical dashboards setup
-        function initializeAnalyticalGraphEngines() {}
-    </script>
-    {% endverbatim %}
+        Swal.close();
+        Swal.fire({
+            title: 'Transmission Complete',
+            text: `Successfully dispatched ${successCount} out of ${total} emails.`,
+            icon: successCount === total ? 'success' : 'warning'
+        });
+
+        // Reset fields
+        selectedEmployeeIds = [];
+        updateSelectedCountUI();
+        $('.employee-checkbox').prop('checked', false);
+        $('#formSendMail')[0].reset();
+
+        function updateProgress(processed) {
+            const b = Swal.getHtmlContainer() ? Swal.getHtmlContainer().querySelector('b') : null;
+            if (b) {
+                b.textContent = processed;
+            }
+        }
+    }
+
+    // ==================== HISTORY LOGS MODULE ====================
+    function loadHistoryLogs() {
+        setTableMessage('#tableHistory', 'Loading history...', 5);
+
+        $.ajax({
+            url: API_BASE + 'history/',
+            type: 'GET',
+            success: function (data) {
+                renderHistoryTable(data);
+            },
+            error: function () {
+                Swal.fire('Error', 'Failed to retrieve audit log history.', 'error');
+            }
+        });
+    }
+
+    function renderHistoryTable(logs) {
+        const table = getDataTable('#tableHistory', {
+            order: [[3, 'desc']],
+            columnDefs: [
+                { orderable: false, targets: [4] }
+            ]
+        });
+        table.clear();
+
+        if (logs.length === 0) {
+            table.row.add([
+                '<span class="text-muted">No history found.</span>',
+                '',
+                '',
+                '',
+                ''
+            ]);
+            table.draw();
+            return;
+        }
+
+        logs.forEach(log => {
+            const formattedTime = log.sent_at ? new Date(log.sent_at).toLocaleString() : '--';
+            const sortableTime = log.sent_at ? `<span class="d-none">${log.sent_at}</span>${formattedTime}` : `<span class="d-none">0000-00-00</span>--`;
+            const stateBadge = log.status === 'Sent' ?
+                `<span class="badge bg-success-subtle text-success">Sent</span>` :
+                `<span class="badge bg-danger-subtle text-danger">Failed</span>`;
+
+            table.row.add([
+                `<div class="fw-semibold">${log.recipient_email}</div>`,
+                `<div class="text-truncate" style="max-width:250px;"><b>${log.subject}</b> - ${log.message}</div>`,
+                stateBadge,
+                sortableTime,
+                `<button class="btn btn-light btn-sm text-primary" onclick="retrySingleLog('${log.recipient_email}', '${log.subject.replace(/'/g, "\\'")}', '${log.message.replace(/'/g, "\\'")}', ${log.employee})"><i data-lucide="refresh-cw" style="width:12px;"></i> Re-send</button>`
+            ]);
+        });
+        table.draw();
+        table.order([[3, 'desc']]).draw();
+        table.columns.adjust();
+        lucide.createIcons();
+    }
+
+    function retrySingleLog(recipientEmail, subject, message, employeeId) {
+        const payload = {
+            employee: employeeId,
+            recipient_email: recipientEmail,
+            subject: subject,
+            message: message
+        };
+
+        Swal.fire({
+            title: 'Retrying Transmission...',
+            html: `Attempting recovery dispatch to <b>${recipientEmail}</b>.`,
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
+        $.ajax({
+            url: API_BASE + 'emails/',
+            type: 'POST',
+            data: JSON.stringify(payload),
+            contentType: 'application/json',
+            success: function () {
+                Swal.fire('Resent Successfully', 'The email has been queued and sent.', 'success');
+                loadHistoryLogs();
+            },
+            error: function (xhr) {
+                Swal.fire('Retry Failed', 'An error occurred during re-transmission.', 'error');
+            }
+        });
+    }
+
+    // Mocks analytical dashboards setup
+    function initializeAnalyticalGraphEngines() { }
+</script>
+{% endverbatim %}
