@@ -43,9 +43,40 @@
             lucide.createIcons();
             checkAuthState();
             setupNavigationHandlers();
+            setupUiHandlers();
             setupFormSubmissions();
             setupEmailModuleHandlers();
+            setupProfileHandlers();
+            setupTemplateHandlers();
+            renderTemplatesTable();
         });
+
+        function getDataTable(selector) {
+            return $.fn.DataTable.isDataTable(selector)
+                ? $(selector).DataTable()
+                : $(selector).DataTable({
+                    retrieve: true,
+                    deferRender: true,
+                    autoWidth: false,
+                    pageLength: 10,
+                    dom: 'rt<"row align-items-center mt-3"<"col-md-6"i><"col-md-6"p>>'
+                });
+        }
+
+        function setupUiHandlers() {
+            $('#toggleLoginPassword').on('click', function() {
+                const input = $('#loginPassword');
+                const isPassword = input.attr('type') === 'password';
+                input.attr('type', isPassword ? 'text' : 'password');
+                $(this).attr('aria-label', isPassword ? 'Hide password' : 'Show password');
+                $(this).html(`<i data-lucide="${isPassword ? 'eye-off' : 'eye'}" style="width:14px;height:14px;"></i>`);
+                lucide.createIcons();
+            });
+
+            $('#filter-emp-search').on('input', applyEmployeeFilters);
+            $('#filter-emp-dept').on('change', applyEmployeeFilters);
+            $('#filter-emp-status').on('change', applyEmployeeFilters);
+        }
 
         // Check authentication state to toggle views
         function checkAuthState() {
@@ -57,8 +88,7 @@
                 
                 // Set admin credentials UI
                 const adminUser = localStorage.getItem('adminUser') || 'admin';
-                $('#userDisplayName').text(adminUser);
-                $('#userInitials').text(adminUser.slice(0, 2).toUpperCase());
+                syncProfileUi(adminUser);
                 
                 // Navigate to employees list by default
                 switchView('view-employees');
@@ -83,7 +113,11 @@
                 success: function(response) {
                     if (response.success && response.token) {
                         localStorage.setItem('token', response.token);
-                        localStorage.setItem('adminUser', username);
+                        if (response.profile) {
+                            saveProfileData(response.profile);
+                        } else {
+                            localStorage.setItem('adminUser', username);
+                        }
                         
                         Swal.fire({
                             title: 'Success!',
@@ -160,6 +194,11 @@
                 loadSendEmailPanel();
             } else if (viewId === 'view-history') {
                 loadHistoryLogs();
+            } else if (viewId === 'view-templates') {
+                renderTemplatesTable();
+            } else if (viewId === 'view-settings') {
+                syncProfileUi();
+                loadProfileFromServer();
             }
 
             $.fn.dataTable
@@ -167,16 +206,259 @@
                 .columns.adjust();
         }
 
+        function getProfileData(defaultUsername) {
+            const savedProfile = JSON.parse(localStorage.getItem('adminProfile') || '{}');
+            const username = savedProfile.username || defaultUsername || localStorage.getItem('adminUser') || 'admin';
+            return {
+                username: username,
+                email: savedProfile.email || 'admin@company.com',
+                displayName: savedProfile.displayName || username
+            };
+        }
+
+        function saveProfileData(profile) {
+            const normalized = {
+                username: profile.username || 'admin',
+                email: profile.email || '',
+                displayName: profile.display_name || profile.displayName || profile.username || 'admin'
+            };
+            localStorage.setItem('adminUser', normalized.username);
+            localStorage.setItem('adminProfile', JSON.stringify(normalized));
+            syncProfileUi(normalized.username);
+        }
+
+        function syncProfileUi(defaultUsername) {
+            const profile = getProfileData(defaultUsername);
+            const displayName = profile.displayName || profile.username;
+            const initials = displayName.slice(0, 2).toUpperCase();
+
+            $('#userDisplayName').text(displayName);
+            $('#userInitials').text(initials);
+            $('#profileUsername').val(profile.username);
+            $('#profileEmail').val(profile.email);
+                $('#profileDisplayName').val(displayName);
+        }
+
+        function loadProfileFromServer() {
+            $.ajax({
+                url: API_BASE + 'profile/',
+                type: 'GET',
+                success: function(profile) {
+                    saveProfileData(profile);
+                }
+            });
+        }
+
+        function setupProfileHandlers() {
+            $('#formProfileDetails').on('submit', function(e) {
+                e.preventDefault();
+                const profile = {
+                    username: $('#profileUsername').val().trim(),
+                    email: $('#profileEmail').val().trim(),
+                    displayName: $('#profileDisplayName').val().trim()
+                };
+
+                if (!profile.username || !profile.displayName) {
+                    Swal.fire('Missing Details', 'Username and display name are required.', 'warning');
+                    return;
+                }
+
+                $.ajax({
+                    url: API_BASE + 'profile/',
+                    type: 'PUT',
+                    data: JSON.stringify({
+                        username: profile.username,
+                        email: profile.email,
+                        display_name: profile.displayName
+                    }),
+                    contentType: 'application/json',
+                    success: function(response) {
+                        saveProfileData(response.profile);
+                        Swal.fire('Profile Updated', response.message || 'Profile details updated.', 'success');
+                    },
+                    error: function(xhr) {
+                        let msg = 'Could not update profile.';
+                        if (xhr.responseJSON) {
+                            msg = Object.keys(xhr.responseJSON).map(key => `${key}: ${xhr.responseJSON[key]}`).join('<br>');
+                        }
+                        Swal.fire('Update Failed', msg, 'error');
+                    }
+                });
+            });
+
+            $('#formChangePassword').on('submit', function(e) {
+                e.preventDefault();
+                const currentPassword = $('#currentPassword').val();
+                const newPassword = $('#newPassword').val();
+
+                if (!currentPassword || !newPassword) {
+                    Swal.fire('Missing Password', 'Enter current and new password.', 'warning');
+                    return;
+                }
+
+                if (newPassword.length < 6) {
+                    Swal.fire('Weak Password', 'New password must be at least 6 characters.', 'warning');
+                    return;
+                }
+
+                $.ajax({
+                    url: API_BASE + 'change-password/',
+                    type: 'POST',
+                    data: JSON.stringify({
+                        current_password: currentPassword,
+                        new_password: newPassword
+                    }),
+                    contentType: 'application/json',
+                    success: function(response) {
+                        if (response.token) {
+                            localStorage.setItem('token', response.token);
+                        }
+                        $('#formChangePassword')[0].reset();
+                        Swal.fire('Password Updated', response.message || 'Password changed successfully.', 'success');
+                    },
+                    error: function(xhr) {
+                        let msg = 'Could not change password.';
+                        if (xhr.responseJSON) {
+                            msg = Object.keys(xhr.responseJSON).map(key => `${key}: ${xhr.responseJSON[key]}`).join('<br>');
+                        }
+                        Swal.fire('Password Change Failed', msg, 'error');
+                    }
+                });
+            });
+        }
+
+        // ==================== TEMPLATES MODULE ====================
+        const defaultEmailTemplates = [
+            {
+                id: 'welcome',
+                title: 'Welcome Email',
+                subject: 'Welcome to the Team!',
+                message: 'Hi {{first_name}},\n\nWelcome to the company! We are thrilled to have you join our organization. Your employee ID is {{employee_id}}.\n\nBest regards,\nAdministration',
+                updatedAt: 'Jul 10, 2026'
+            },
+            {
+                id: 'meeting',
+                title: 'Meeting Reminder',
+                subject: 'Upcoming Team Review Sync Meeting',
+                message: 'Hi {{first_name}},\n\nThis is a quick reminder regarding our review meeting scheduled for tomorrow. Please be prepared with your reports.\n\nBest,\nManagement',
+                updatedAt: 'Jun 15, 2026'
+            },
+            {
+                id: 'project',
+                title: 'Project Update',
+                subject: 'Project Deployment Status Parameters Update',
+                message: 'Hello {{first_name}},\n\nPlease review the deployment framework documentation and update your unit modules accordingly.\n\nThanks,\nCore Engineering Team',
+                updatedAt: 'Jul 12, 2026'
+            },
+            {
+                id: 'holiday',
+                title: 'Holiday Notice',
+                subject: 'Notice of National Holiday Office Closure',
+                message: 'Hi {{first_name}},\n\nPlease note that our corporate offices will remain closed tomorrow in observance of the national holiday.\n\nWarm regards,\nHR Department',
+                updatedAt: 'Jul 13, 2026'
+            }
+        ];
+
+        function getEmailTemplates() {
+            const customTemplates = JSON.parse(localStorage.getItem('emailTemplates') || '[]');
+            return [...defaultEmailTemplates, ...customTemplates];
+        }
+
+        function saveCustomTemplates(templates) {
+            localStorage.setItem('emailTemplates', JSON.stringify(templates));
+        }
+
+        function renderTemplatesTable() {
+            const table = getDataTable('#tableTemplates');
+            table.clear();
+
+            getEmailTemplates().forEach(template => {
+                const canDelete = template.id.startsWith('custom-');
+                const deleteButton = canDelete
+                    ? `<button class="btn btn-light text-danger btn-sm px-2 py-1 border" onclick="deleteTemplate('${template.id}')"><i data-lucide="trash-2" style="width:14px;"></i></button>`
+                    : `<button class="btn btn-light btn-sm px-2 py-1 border" disabled><i data-lucide="lock" style="width:14px;"></i></button>`;
+
+                table.row.add([
+                    `<span class="fw-semibold">${template.title}</span>`,
+                    `<span class="mono">${template.subject}</span>`,
+                    `<span class="mono">${template.updatedAt}</span>`,
+                    deleteButton
+                ]);
+            });
+
+            table.draw();
+            table.columns.adjust();
+            populateEmailTemplateDropdown();
+            lucide.createIcons();
+        }
+
+        function populateEmailTemplateDropdown() {
+            const selectedValue = $('#emailTemplate').val();
+            const options = ['<option value="">Select Template</option>'];
+            getEmailTemplates().forEach(template => {
+                options.push(`<option value="${template.id}">${template.title}</option>`);
+            });
+            $('#emailTemplate').html(options.join('')).val(selectedValue || '');
+        }
+
+        function setupTemplateHandlers() {
+            $('#modalTemplate').on('show.bs.modal', function() {
+                $('#formAddTemplate')[0].reset();
+            });
+
+            $('#formAddTemplate').on('submit', function(e) {
+                e.preventDefault();
+                const title = $('#templateTitle').val().trim();
+                const subject = $('#templateSubject').val().trim();
+                const message = $('#templateMessage').val().trim();
+
+                if (!title || !subject || !message) {
+                    Swal.fire('Missing Details', 'Template title, subject, and message are required.', 'warning');
+                    return;
+                }
+
+                const customTemplates = JSON.parse(localStorage.getItem('emailTemplates') || '[]');
+                customTemplates.push({
+                    id: `custom-${Date.now()}`,
+                    title,
+                    subject,
+                    message,
+                    updatedAt: new Date().toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric'
+                    })
+                });
+                saveCustomTemplates(customTemplates);
+
+                $('#modalTemplate').modal('hide');
+                $('#formAddTemplate')[0].reset();
+                renderTemplatesTable();
+                Swal.fire('Template Saved', 'New email template is now available in Send Email.', 'success');
+            });
+        }
+
+        function deleteTemplate(id) {
+            const customTemplates = JSON.parse(localStorage.getItem('emailTemplates') || '[]');
+            saveCustomTemplates(customTemplates.filter(template => template.id !== id));
+            renderTemplatesTable();
+            Swal.fire('Deleted', 'Template removed.', 'success');
+        }
+
         // ==================== DEPARTMENTS MODULE ====================
         let globalDepartments = [];
         
-        function loadDepartments(callback) {
+        function loadDepartments(callback, shouldRender = true) {
             $.ajax({
                 url: API_BASE + 'departments/',
                 type: 'GET',
                 success: function(data) {
                     globalDepartments = data;
-                    renderDepartmentsTable(data);
+                    if (shouldRender) {
+                        loadDepartmentHeadcounts(function() {
+                            renderDepartmentsTable(data);
+                        });
+                    }
                     populateDeptSelects(data);
                     if (callback) callback(data);
                 },
@@ -186,14 +468,29 @@
             });
         }
 
+        function loadDepartmentHeadcounts(callback) {
+            $.ajax({
+                url: API_BASE + 'employees/',
+                type: 'GET',
+                success: function(data) {
+                    globalEmployees = data;
+                    if (callback) callback(data);
+                },
+                error: function() {
+                    globalEmployees = [];
+                    if (callback) callback([]);
+                }
+            });
+        }
+
         function renderDepartmentsTable(departments) {
-            const table = $('#tableDepts').DataTable();
+            const table = getDataTable('#tableDepts');
             table.clear();
 
             const departmentDefaults = {
-                'core engineering': { members: '320 Members', code: 'DEPT-ENG-CORE', order: 1 },
-                'human resources': { members: '45 Members', code: 'DEPT-HQ-HR', order: 2 },
-                'sales development': { members: '412 Members', code: 'DEPT-SALES-PRO', order: 3 }
+                'core engineering': { code: 'DEPT-ENG-CORE', order: 1 },
+                'human resources': { code: 'DEPT-HQ-HR', order: 2 },
+                'sales development': { code: 'DEPT-SALES-PRO', order: 3 }
             };
 
             const makeRoutingCode = (name) => {
@@ -220,10 +517,11 @@
             sortedDepartments.forEach(dept => {
                 const deptKey = (dept.department_name || '').toLowerCase().trim();
                 const fallback = departmentDefaults[deptKey] || {};
+                const headcount = globalEmployees.filter(emp => Number(emp.department) === Number(dept.id)).length;
                 const actionBtn = `<button class="btn btn-light text-danger btn-sm px-2 py-1 border" onclick="deleteDepartment(${dept.id})"><i data-lucide="trash-2" style="width:14px;"></i></button>`;
                 table.row.add([
                     `<span class="fw-semibold">${dept.department_name}</span>`,
-                    fallback.members || '--',
+                    `${headcount} ${headcount === 1 ? 'Member' : 'Members'}`,
                     `<code>${makeRoutingCode(dept.department_name)}</code>`,
                     actionBtn
                 ]);
@@ -234,14 +532,18 @@
         }
 
         function populateDeptSelects(departments) {
+            const selectedDepartment = $('#empDepartment').val();
             const selectOptions = ['<option value="">Select Department</option>'];
             departments.forEach(dept => {
                 selectOptions.push(`<option value="${dept.id}">${dept.department_name}</option>`);
             });
             $('#empDepartment').html(selectOptions.join(''));
+            if (selectedDepartment) {
+                $('#empDepartment').val(selectedDepartment);
+            }
             
             // Also update the send email department filters dropdown
-            const filterDropdown = $('.dropdown-menu');
+            const filterDropdown = $('#view-send-email .dropdown-menu');
             let filterHtml = '<li><a class="dropdown-item dept-filter" href="#" data-dept="all">All Departments</a></li>';
             departments.forEach(dept => {
                 filterHtml += `<li><a class="dropdown-item dept-filter" href="#" data-dept="${dept.id}">${dept.department_name}</a></li>`;
@@ -299,11 +601,11 @@
                         Swal.fire('Error', 'Failed to retrieve employee directory.', 'error');
                     }
                 });
-            });
+            }, false);
         }
 
         function renderEmployeesTable(employees) {
-            const table = $('#tableEmployees').DataTable();
+            const table = getDataTable('#tableEmployees');
             table.clear();
 
             employees.forEach(emp => {
@@ -319,7 +621,7 @@
                 `;
 
                 table.row.add([
-                    `<div class="fw-semibold">${fullName}</div><small class="text-muted">ID: ${emp.employee_id}</small>`,
+                    `<div class="fw-semibold">${fullName}</div><small class="text-muted">ID: ${emp.employee_id}</small><span class="d-none">${emp.status ? 'Active' : 'Pending'}</span>`,
                     emp.email,
                     emp.phone,
                     `<span class="badge bg-light text-dark">${deptName}</span>`,
@@ -329,6 +631,30 @@
             table.draw();
             table.columns.adjust();
             lucide.createIcons();
+            populateEmployeeFilters();
+            applyEmployeeFilters();
+        }
+
+        function populateEmployeeFilters() {
+            const currentDept = $('#filter-emp-dept').val();
+            const options = ['<option value="">All Departments</option>'];
+            globalDepartments.forEach(dept => {
+                options.push(`<option value="${dept.department_name}">${dept.department_name}</option>`);
+            });
+            $('#filter-emp-dept').html(options.join('')).val(currentDept || '');
+        }
+
+        function applyEmployeeFilters() {
+            if (!$.fn.DataTable.isDataTable('#tableEmployees')) return;
+            const table = getDataTable('#tableEmployees');
+            const searchText = $('#filter-emp-search').val() || '';
+            const dept = $('#filter-emp-dept').val() || '';
+            const status = $('#filter-emp-status').val() || '';
+
+            table.search(searchText);
+            table.column(3).search(dept, false, false);
+            table.column(0).search(status, false, false);
+            table.draw();
         }
 
         function editEmployee(id) {
@@ -354,11 +680,18 @@
 
         // Reset employee modal parameters when opening for a new entry
         $('#modalEmployee').on('show.bs.modal', function(e) {
+            const selectedDepartment = $('#empDepartment').val();
+            loadDepartments(function() {
+                if (selectedDepartment) {
+                    $('#empDepartment').val(selectedDepartment);
+                }
+            }, false);
+
             if (e.relatedTarget) { // Triggered by 'Add New Record' button
                 $('#formAddEmp')[0].reset();
                 $('#empId').val('');
                 $('#empEmployeeId').prop('disabled', false);
-                $('#employeeModalTitle').text('Map Core Employee Profile Record');
+                $('#employeeModalTitle').text('Add New Employee');
             }
         });
 
@@ -465,6 +798,7 @@
 
         function loadSendEmailPanel() {
             // Load templates and populate employee target panels
+            populateEmailTemplateDropdown();
             loadDepartments(function() {
                 $.ajax({
                     url: API_BASE + 'employees/',
@@ -474,11 +808,11 @@
                         renderSendEmailEmployeeList(data);
                     }
                 });
-            });
+            }, false);
         }
 
         function renderSendEmailEmployeeList(employees) {
-            const container = $('#view-send-email div[style*="max-height:500px"]');
+            const container = $('#view-send-email .recipient-list');
             container.empty();
 
             if (employees.length === 0) {
@@ -574,22 +908,9 @@
             // Template fill listener
             $('#emailTemplate').on('change', function() {
                 const tpl = $(this).val();
-                let subject = '';
-                let message = '';
-
-                if (tpl === 'welcome') {
-                    subject = 'Welcome to the Team!';
-                    message = 'Hi {{first_name}},\n\nWelcome to the company! We are thrilled to have you join our organization. Your employee ID is {{employee_id}}.\n\nBest regards,\nAdministration';
-                } else if (tpl === 'meeting') {
-                    subject = 'Upcoming Team Review Sync Meeting';
-                    message = 'Hi {{first_name}},\n\nThis is a quick reminder regarding our review meeting scheduled for tomorrow. Please be prepared with your reports.\n\nBest,\nManagement';
-                } else if (tpl === 'project') {
-                    subject = 'Project Deployment Status Parameters Update';
-                    message = 'Hello {{first_name}},\n\nPlease review the deployment framework documentation and update your unit modules accordingly.\n\nThanks,\nCore Engineering Team';
-                } else if (tpl === 'holiday') {
-                    subject = 'Notice of National Holiday Office Closure';
-                    message = 'Hi {{first_name}},\n\nPlease note that our corporate offices will remain closed tomorrow in observance of the national holiday.\n\nWarm regards,\nHR Department';
-                }
+                const template = getEmailTemplates().find(item => item.id === tpl);
+                const subject = template ? template.subject : '';
+                const message = template ? template.message : '';
 
                 $('#emailSubject').val(subject);
                 $('#emailMessage').val(message);
@@ -707,7 +1028,7 @@
         }
 
         function renderHistoryTable(logs) {
-            const table = $('#tableHistory').DataTable();
+            const table = getDataTable('#tableHistory');
             table.clear();
 
             logs.forEach(log => {

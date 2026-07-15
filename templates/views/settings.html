@@ -1,32 +1,46 @@
 <!-- 8. CONFIGURATION SETTINGS VIEW -->
 <div id="view-settings" class="app-view">
     <div class="profile-shell">
-        <div class="profile-card">
-            <div class="card ep-card p-4 p-md-5 bg-white">
-                <div class="text-center mb-4">
-                    <div class="avatar-tag mx-auto mb-3 text-uppercase" style="width: 64px; height: 64px; font-size: 1.4rem; font-weight: 700; line-height: 64px; display: flex; align-items: center; justify-content: center;" id="userProfileInitials">AD</div>
-                    <h4 class="fw-bold m-0" id="userProfileName">System Admin</h4>
-                    <p class="text-muted small mt-1">Manage your console account credentials</p>
-                </div>
-                
-                <div class="mb-3">
-                    <label class="form-label ep-label">Username</label>
-                    <input type="text" class="form-control bg-light" id="profileUsername" value="Admin" readonly>
-                </div>
+        <div class="profile-grid">
+            <div class="card ep-card profile-panel p-4 bg-white">
+                <h4 class="fw-bold mb-4">My Profile</h4>
 
-                <div class="mb-3">
-                    <label class="form-label ep-label">Email Address</label>
-                    <input type="email" class="form-control bg-light" id="profileEmail" value="admin@company.com" readonly>
-                </div>
+                <form id="formProfileDetails">
+                    <div class="mb-3">
+                        <label class="form-label ep-label">Username</label>
+                        <input type="text" class="form-control" id="profileUsername" required>
+                    </div>
 
-                <div class="mb-3">
-                    <label class="form-label ep-label">Security Credentials Status</label>
-                    <input type="text" class="form-control bg-light text-muted mono" value="AUTHENTICATED via DRF TOKEN" readonly>
-                </div>
-                
-                <button class="btn btn-outline-secondary w-100 mt-3" disabled>
-                    <i data-lucide="lock" style="width: 14px; height: 14px; display: inline-block; vertical-align: middle;" class="me-2"></i> Account Managed via Directory Services
-                </button>
+                    <div class="mb-3">
+                        <label class="form-label ep-label">Email</label>
+                        <input type="email" class="form-control" id="profileEmail" placeholder="admin@company.com">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label ep-label">Display Name</label>
+                        <input type="text" class="form-control" id="profileDisplayName" required>
+                    </div>
+
+                    <button type="submit" class="btn btn-success w-100 mt-2">Update Profile</button>
+                </form>
+            </div>
+
+            <div class="card ep-card profile-panel p-4 bg-white">
+                <h4 class="fw-bold mb-4">Change Password</h4>
+
+                <form id="formChangePassword">
+                    <div class="mb-3">
+                        <label class="form-label ep-label">Current Password</label>
+                        <input type="password" class="form-control" id="currentPassword" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label ep-label">New Password</label>
+                        <input type="password" class="form-control" id="newPassword" minlength="6" required>
+                    </div>
+
+                    <button type="submit" class="btn btn-dark w-100 mt-2">Change Password</button>
+                </form>
             </div>
         </div>
     </div>

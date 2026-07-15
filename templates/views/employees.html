@@ -10,22 +10,20 @@
                     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
                         <div class="text-muted small">Manage every employee record and their routing details.</div>
                         <div class="d-flex gap-2">
-                            <button class="btn btn-outline-secondary btn-sm" onclick="triggerImportExport('CSV Imported Successfully!')"><i data-lucide="download" style="width:14px;"></i> Import CSV</button>
-                            <button class="btn btn-outline-secondary btn-sm" onclick="triggerImportExport('Records Exported to Excel Grid!')"><i data-lucide="upload" style="width:14px;"></i> Export Excel</button>
-                            <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#modalEmployee"><i data-lucide="plus" style="width:14px;"></i> Add New Record</button>
+                            <!-- <button class="btn btn-outline-secondary btn-sm" onclick="triggerImportExport('CSV Imported Successfully!')"><i data-lucide="download" style="width:14px;"></i> Import CSV</button>
+                            <button class="btn btn-outline-secondary btn-sm" onclick="triggerImportExport('Records Exported to Excel Grid!')"><i data-lucide="upload" style="width:14px;"></i> Export Excel</button> -->
+                            <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#modalEmployee"><i data-lucide="plus" style="width:14px;"></i> Add New Employee</button>
                         </div>
                     </div>
 
                     <!-- Advanced Filters Context -->
                     <div class="row g-2 mb-3">
+                        <div class="col-12 col-md-4">
+                            <input type="search" class="form-control form-control-sm" id="filter-emp-search" placeholder="Search employees...">
+                        </div>
                         <div class="col-12 col-md-3">
                             <select class="form-select form-select-sm" id="filter-emp-dept">
                                 <option value="">All Departments</option>
-                                <option value="Sales">Sales</option>
-                                <option value="Engineering">Engineering</option>
-                                <option value="HR">HR</option>
-                                <option value="Finance">Finance</option>
-                                <option value="Support">Support</option>
                             </select>
                         </div>
                         <div class="col-12 col-md-3">

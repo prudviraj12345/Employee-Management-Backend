@@ -4,7 +4,7 @@
 
             <div class="modal-header bg-light">
                 <h5 class="modal-title fw-bold" id="employeeModalTitle">
-                    Map Core Employee Profile Record
+                    Add New Employee
                 </h5>
                 <button type="button"
                         class="btn-close"
@@ -135,10 +135,17 @@
 
                     </div>
 
+                    <button type="submit" class="btn btn-success w-100 py-2">Save Employee</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="modal fade" id="modalDept" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content border-0 shadow">
-                <div class="modal-header bg-light"><h5 class="modal-title fw-bold">Provision New Organizational Unit</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-header bg-light"><h5 class="modal-title fw-bold">Add New Department</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
                 <div class="modal-body">
                     <form id="formAddDept">
                         <div class="mb-3">
@@ -149,23 +156,25 @@
                             <label class="form-label small text-secondary">Department Description (min 10 characters)</label>
                             <textarea class="form-control" id="deptDescription" required placeholder="Quality Assurance and Testing unit..."></textarea>
                         </div>
-                        <button type="submit" class="btn btn-success w-100 py-2">Initialize Allocation</button>
+                        <button type="submit" class="btn btn-success w-100 py-2">Save Department</button>
                     </form>
                 </div>
             </div>
         </div>
+</div>
 
 <div class="modal fade" id="modalTemplate" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content border-0 shadow">
                 <div class="modal-header bg-light"><h5 class="modal-title fw-bold">Construct Base Transmission Content Template</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
                 <div class="modal-body">
-                    <form id="formAddTemplate" onsubmit="handleModalSubmit(event, 'modalTemplate', 'New template profile saved.')">
-                        <div class="mb-3"><label class="form-label small text-secondary">Template Structural Alias</label><input type="text" class="form-control" required placeholder="Engineering Retro Dispatch"></div>
-                        <div class="mb-3"><label class="form-label small text-secondary">Parsed Dynamic Subject Line</label><input type="text" class="form-control" required placeholder="System Status Alert: {{event_id}} executed successfully"></div>
-                        <div class="mb-3"><label class="form-label small text-secondary">Core Template Macro Content Text</label><textarea class="form-control" rows="5" placeholder="Body payload mapping context..."></textarea></div>
+                    <form id="formAddTemplate">
+                        <div class="mb-3"><label class="form-label small text-secondary">Template Structural Alias</label><input type="text" class="form-control" id="templateTitle" required placeholder="Engineering Retro Dispatch"></div>
+                        <div class="mb-3"><label class="form-label small text-secondary">Parsed Dynamic Subject Line</label><input type="text" class="form-control" id="templateSubject" required placeholder="System Status Alert: {{event_id}} executed successfully"></div>
+                        <div class="mb-3"><label class="form-label small text-secondary">Core Template Macro Content Text</label><textarea class="form-control" id="templateMessage" rows="5" required placeholder="Body payload mapping context..."></textarea></div>
                         <button type="submit" class="btn btn-success w-100 py-2">Save Content Configuration Blueprint</button>
                     </form>
                 </div>
             </div>
         </div>
+</div>
