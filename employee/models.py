@@ -29,30 +29,7 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 
 
-# ---------------------------------------------------------------------------
-# Department
-# ---------------------------------------------------------------------------
-class Department(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    department_name = models.CharField(max_length=100, unique=True)
-    department_code = models.CharField(
-        max_length=10,
-        unique=True,
-        validators=[
-            RegexValidator(
-                regex=r'^[A-Z]{2,10}$',
-                message="Department code must be 2-10 uppercase letters (e.g. HR, ENG, FIN)."
-            )
-        ],
-    )
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        ordering = ['department_name']
-
-    def __str__(self):
-        return f"{self.department_name} ({self.department_code})"
-
+from department.models import Department
 
 # ---------------------------------------------------------------------------
 # Employee

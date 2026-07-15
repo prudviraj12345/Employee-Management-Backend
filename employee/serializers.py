@@ -10,31 +10,9 @@ import re
 from datetime import date
 
 from rest_framework import serializers
-from .models import Employee, Department
+from .models import Employee
+from department.models import Department
 
-
-# ---------------------------------------------------------------------------
-# Department
-# ---------------------------------------------------------------------------
-class DepartmentSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Department
-        fields = ['id', 'department_name', 'department_code', 'created_at']
-        read_only_fields = ['id', 'created_at']
-
-    def validate_department_code(self, value):
-        value = value.upper().strip()
-        if not re.match(r'^[A-Z]{2,10}$', value):
-            raise serializers.ValidationError(
-                "Department code must be 2-10 uppercase letters (e.g. HR, ENG)."
-            )
-        return value
-
-    def validate_department_name(self, value):
-        value = value.strip()
-        if len(value) < 2:
-            raise serializers.ValidationError("Department name is too short.")
-        return value
 
 
 # ---------------------------------------------------------------------------
