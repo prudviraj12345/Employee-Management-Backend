@@ -1,0 +1,41 @@
+<!-- 6. EMAIL HISTORY COMPONENT VIEW -->
+            <div id="view-history" class="app-view view-wide">
+                <div class="ep-page-head">
+                    <div>
+                        <span class="ep-eyebrow">Audit Trail</span>
+                        <h4 class="ep-page-title m-0">System Execution Logs</h4>
+                    </div>
+                </div>
+                <div class="card ep-card full-width-card p-4 bg-white">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle w-100" id="tableHistory">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Target Identity</th>
+                                    <th>Subject Reference Context</th>
+                                    <th>Transmission State</th>
+                                    <th>Dispatched Time Matrix</th>
+                                    <th>Fault Recovery</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Rahul Verma</td>
+                                    <td class="text-truncate" style="max-width: 200px;">Project Deployment Framework Sync Parameters</td>
+                                    <td><span class="badge bg-success-subtle">SUCCESS</span></td>
+                                    <td class="mono">2026-07-11 10:14</td>
+                                    <td><button class="btn btn-light btn-sm" disabled><i data-lucide="refresh-cw" style="width:12px;"></i></button></td>
+                                </tr>
+                                <tr>
+                                    <td>Ananya Sharma</td>
+                                    <td class="text-truncate" style="max-width: 200px;">Q3 Forecast Strategy Realignment Blueprint Docs</td>
+                                    <td><span class="badge bg-danger-subtle">FAILED</span></td>
+                                    <td class="mono">2026-07-11 09:30</td>
+                                    <td><button class="btn btn-light text-primary btn-sm border" onclick="triggerGenericToast('Re-queue request dispatched to message broker cluster.')"><i data-lucide="refresh-cw" style="width:12px;"></i> Retry</button></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <!-- 7.

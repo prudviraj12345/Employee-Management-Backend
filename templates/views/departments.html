@@ -1,0 +1,30 @@
+<!-- 3. DEPARTMENTS COMPONENT VIEW -->
+            <div id="view-departments" class="app-view view-wide">
+                <div class="ep-page-head">
+                    <div>
+                        <span class="ep-eyebrow">Structure</span>
+                        <h4 class="ep-page-title m-0">Corporate Operational Units</h4>
+                    </div>
+                    <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#modalDept"><i data-lucide="plus" style="width:14px;"></i> New Department</button>
+                </div>
+                <div class="card ep-card full-width-card p-4 bg-white">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle w-100" id="tableDepts">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Department Name</th>
+                                    <th>Total Map Headcount</th>
+                                    <th>Routing Code Reference</th>
+                                    <th>System Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td class="fw-semibold">Core Engineering</td><td>320 Members</td><td><code>DEPT-ENG-CORE</code></td><td><button class="btn btn-light text-danger btn-sm px-2 py-1 border" onclick="actionMockDelete()"><i data-lucide="trash-2" style="width:14px;"></i></button></td></tr>
+                                <tr><td class="fw-semibold">Human Resources</td><td>45 Members</td><td><code>DEPT-HQ-HR</code></td><td><button class="btn btn-light text-danger btn-sm px-2 py-1 border" onclick="actionMockDelete()"><i data-lucide="trash-2" style="width:14px;"></i></button></td></tr>
+                                <tr><td class="fw-semibold">Sales Development</td><td>412 Members</td><td><code>DEPT-SALES-PRO</code></td><td><button class="btn btn-light text-danger btn-sm px-2 py-1 border" onclick="actionMockDelete()"><i data-lucide="trash-2" style="width:14px;"></i></button></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <!-- 4.

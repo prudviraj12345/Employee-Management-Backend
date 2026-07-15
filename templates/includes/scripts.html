@@ -1,0 +1,758 @@
+<!-- ==================== RUNTIME SYSTEM SCRIPTS ORCHESTRATION ==================== -->
+    <!-- Dependencies Bootstrap Integration Layers -->
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+    {% verbatim %}
+    <script>
+        // API Base URL config
+        const API_BASE = window.location.protocol.startsWith('http') ? '/api/' : 'http://127.0.0.1:8000/api/';
+
+        // Configure AJAX to pass Token Authentication header automatically
+        $.ajaxSetup({
+            beforeSend: function(xhr) {
+                const token = localStorage.getItem('token');
+                if (token) {
+                    xhr.setRequestHeader('Authorization', 'Token ' + token);
+                }
+            }
+        });
+
+        // Global AJAX error interceptor for unauthorized requests (401/403)
+        $(document).ajaxError(function(event, xhr, settings) {
+            if (xhr.status === 401 || xhr.status === 403) {
+                if (settings.url.indexOf('login') === -1) {
+                    localStorage.removeItem('token');
+                    Swal.fire({
+                        title: 'Unauthorized Action',
+                        text: 'Your session has expired. Please sign in again.',
+                        icon: 'warning'
+                    });
+                    checkAuthState();
+                }
+            }
+        });
+
+        // Initialize elements on load
+        $(document).ready(function() {
+            lucide.createIcons();
+            checkAuthState();
+            setupNavigationHandlers();
+            setupFormSubmissions();
+            setupEmailModuleHandlers();
+        });
+
+        // Check authentication state to toggle views
+        function checkAuthState() {
+            const token = localStorage.getItem('token');
+            if (token) {
+                $('#auth-container').hide();
+                $('#app-wrapper').css('display', 'flex');
+                $('.navbar-custom').css('display', 'flex');
+                
+                // Set admin credentials UI
+                const adminUser = localStorage.getItem('adminUser') || 'admin';
+                $('#userDisplayName').text(adminUser);
+                $('#userInitials').text(adminUser.slice(0, 2).toUpperCase());
+                
+                // Navigate to employees list by default
+                switchView('view-employees');
+            } else {
+                $('#app-wrapper').hide();
+                $('.navbar-custom').hide();
+                $('#auth-container').css('display', 'flex');
+            }
+        }
+
+        // Handle Login Submission
+        function handleSystemLogin(event) {
+            event.preventDefault();
+            const username = $('#loginEmail').val();
+            const password = $('#loginPassword').val();
+
+            $.ajax({
+                url: API_BASE + 'login/',
+                type: 'POST',
+                data: JSON.stringify({ username, password }),
+                contentType: 'application/json',
+                success: function(response) {
+                    if (response.success && response.token) {
+                        localStorage.setItem('token', response.token);
+                        localStorage.setItem('adminUser', username);
+                        
+                        Swal.fire({
+                            title: 'Success!',
+                            text: 'Login successful.',
+                            icon: 'success',
+                            timer: 1500,
+                            showConfirmButton: false
+                        });
+                        checkAuthState();
+                    } else {
+                        Swal.fire('Login Failed', response.message || 'Invalid credentials.', 'error');
+                    }
+                },
+                error: function(xhr) {
+                    let errMsg = 'Could not reach server.';
+                    if (xhr.responseJSON) {
+                        errMsg = xhr.responseJSON.message || JSON.stringify(xhr.responseJSON);
+                    }
+                    Swal.fire('Authentication Error', errMsg, 'error');
+                }
+            });
+        }
+
+        // Handle Logout Action
+        function handleSystemLogout() {
+            Swal.fire({
+                title: 'Logout Request',
+                text: 'Are you sure you want to end your session?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#16a34a',
+                cancelButtonColor: '#dc2626',
+                confirmButtonText: 'Yes, Sign Out'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('adminUser');
+                    checkAuthState();
+                }
+            });
+        }
+
+        // Navigation tab trigger handler
+        function setupNavigationHandlers() {
+            $('.nav-link-custom').on('click', function(e) {
+                e.preventDefault();
+                if ($(this).hasClass('logout')) return;
+                
+                const targetViewId = $(this).data('target');
+                if (!targetViewId) return;
+
+                $('.nav-link-custom').removeClass('active');
+                $(this).addClass('active');
+
+                switchView(targetViewId);
+            });
+            
+            // Collapsible Sidebar handler
+            $('#sidebarToggle').on('click', function() {
+                $('#sidebar').toggleClass('collapsed');
+                $('.main-workspace').toggleClass('expanded');
+            });
+        }
+
+        function switchView(viewId) {
+            $('.app-view').removeClass('active-view');
+            $('#' + viewId).addClass('active-view');
+
+            if (viewId === 'view-employees') {
+                loadEmployees();
+            } else if (viewId === 'view-departments') {
+                loadDepartments();
+            } else if (viewId === 'view-send-email') {
+                loadSendEmailPanel();
+            } else if (viewId === 'view-history') {
+                loadHistoryLogs();
+            }
+
+            $.fn.dataTable
+                .tables({ visible: true, api: true })
+                .columns.adjust();
+        }
+
+        // ==================== DEPARTMENTS MODULE ====================
+        let globalDepartments = [];
+        
+        function loadDepartments(callback) {
+            $.ajax({
+                url: API_BASE + 'departments/',
+                type: 'GET',
+                success: function(data) {
+                    globalDepartments = data;
+                    renderDepartmentsTable(data);
+                    populateDeptSelects(data);
+                    if (callback) callback(data);
+                },
+                error: function() {
+                    Swal.fire('Error', 'Failed to retrieve department records.', 'error');
+                }
+            });
+        }
+
+        function renderDepartmentsTable(departments) {
+            const table = $('#tableDepts').DataTable();
+            table.clear();
+
+            const departmentDefaults = {
+                'core engineering': { members: '320 Members', code: 'DEPT-ENG-CORE', order: 1 },
+                'human resources': { members: '45 Members', code: 'DEPT-HQ-HR', order: 2 },
+                'sales development': { members: '412 Members', code: 'DEPT-SALES-PRO', order: 3 }
+            };
+
+            const makeRoutingCode = (name) => {
+                const cleanName = (name || 'Department').toLowerCase().trim();
+                if (departmentDefaults[cleanName]) {
+                    return departmentDefaults[cleanName].code;
+                }
+                const slug = cleanName
+                    .replace(/&/g, 'and')
+                    .replace(/[^a-z0-9]+/g, '-')
+                    .replace(/^-+|-+$/g, '')
+                    .toUpperCase();
+                return `DEPT-${slug || 'GENERAL'}`;
+            };
+
+            const sortedDepartments = [...departments].sort((a, b) => {
+                const aKey = (a.department_name || '').toLowerCase().trim();
+                const bKey = (b.department_name || '').toLowerCase().trim();
+                const aOrder = departmentDefaults[aKey]?.order || 99;
+                const bOrder = departmentDefaults[bKey]?.order || 99;
+                return aOrder - bOrder || a.department_name.localeCompare(b.department_name);
+            });
+
+            sortedDepartments.forEach(dept => {
+                const deptKey = (dept.department_name || '').toLowerCase().trim();
+                const fallback = departmentDefaults[deptKey] || {};
+                const actionBtn = `<button class="btn btn-light text-danger btn-sm px-2 py-1 border" onclick="deleteDepartment(${dept.id})"><i data-lucide="trash-2" style="width:14px;"></i></button>`;
+                table.row.add([
+                    `<span class="fw-semibold">${dept.department_name}</span>`,
+                    fallback.members || '--',
+                    `<code>${makeRoutingCode(dept.department_name)}</code>`,
+                    actionBtn
+                ]);
+            });
+            table.draw();
+            table.columns.adjust();
+            lucide.createIcons();
+        }
+
+        function populateDeptSelects(departments) {
+            const selectOptions = ['<option value="">Select Department</option>'];
+            departments.forEach(dept => {
+                selectOptions.push(`<option value="${dept.id}">${dept.department_name}</option>`);
+            });
+            $('#empDepartment').html(selectOptions.join(''));
+            
+            // Also update the send email department filters dropdown
+            const filterDropdown = $('.dropdown-menu');
+            let filterHtml = '<li><a class="dropdown-item dept-filter" href="#" data-dept="all">All Departments</a></li>';
+            departments.forEach(dept => {
+                filterHtml += `<li><a class="dropdown-item dept-filter" href="#" data-dept="${dept.id}">${dept.department_name}</a></li>`;
+            });
+            filterDropdown.html(filterHtml);
+            
+            // Re-apply filter click listeners
+            $('.dept-filter').on('click', function(e) {
+                e.preventDefault();
+                const deptId = $(this).data('dept');
+                filterEmailEmployeeList(deptId);
+            });
+        }
+
+        function deleteDepartment(id) {
+            Swal.fire({
+                title: 'Are you sure?',
+                text: 'You cannot undo this action.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonText: 'Cancel',
+                confirmButtonText: 'Delete'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: API_BASE + `departments/${id}/`,
+                        type: 'DELETE',
+                        success: function() {
+                            Swal.fire('Deleted!', 'Department deleted successfully.', 'success');
+                            loadDepartments();
+                        },
+                        error: function(xhr) {
+                            Swal.fire('Delete Failed', 'This department contains active employee mappings.', 'error');
+                        }
+                    });
+                }
+            });
+        }
+
+        // ==================== EMPLOYEES MODULE ====================
+        let globalEmployees = [];
+
+        function loadEmployees() {
+            // Retrieve departments first to guarantee mapping references
+            loadDepartments(function() {
+                $.ajax({
+                    url: API_BASE + 'employees/',
+                    type: 'GET',
+                    success: function(data) {
+                        globalEmployees = data;
+                        renderEmployeesTable(data);
+                    },
+                    error: function() {
+                        Swal.fire('Error', 'Failed to retrieve employee directory.', 'error');
+                    }
+                });
+            });
+        }
+
+        function renderEmployeesTable(employees) {
+            const table = $('#tableEmployees').DataTable();
+            table.clear();
+
+            employees.forEach(emp => {
+                const fullName = `${emp.first_name} ${emp.last_name}`;
+                const deptName = emp.department_name || 'Unassigned';
+                const statusBadge = emp.status ? 
+                    `<span class="badge bg-success-subtle text-success">Active</span>` : 
+                    `<span class="badge bg-secondary-subtle text-secondary">Inactive</span>`;
+                
+                const actionBtns = `
+                    <button class="btn btn-light btn-sm px-2 py-1 border" onclick="editEmployee(${emp.id})"><i data-lucide="edit-3" style="width:14px;"></i></button>
+                    <button class="btn btn-light text-danger btn-sm px-2 py-1 border" onclick="deleteEmployee(${emp.id})"><i data-lucide="trash-2" style="width:14px;"></i></button>
+                `;
+
+                table.row.add([
+                    `<div class="fw-semibold">${fullName}</div><small class="text-muted">ID: ${emp.employee_id}</small>`,
+                    emp.email,
+                    emp.phone,
+                    `<span class="badge bg-light text-dark">${deptName}</span>`,
+                    actionBtns
+                ]);
+            });
+            table.draw();
+            table.columns.adjust();
+            lucide.createIcons();
+        }
+
+        function editEmployee(id) {
+            const emp = globalEmployees.find(e => e.id === id);
+            if (!emp) return;
+
+            // Pre-populate fields in the employee modal form
+            $('#empId').val(emp.id);
+            $('#empEmployeeId').val(emp.employee_id).prop('disabled', true); // ID remains immutable
+            $('#empDepartment').val(emp.department);
+            $('#empFirstName').val(emp.first_name);
+            $('#empLastName').val(emp.last_name);
+            $('#empEmail').val(emp.email);
+            $('#empPhone').val(emp.phone);
+            $('#empDesignation').val(emp.designation);
+            $('#empSalary').val(emp.salary);
+            $('#empJoiningDate').val(emp.joining_date);
+            $('#empStatus').prop('checked', emp.status);
+
+            $('#employeeModalTitle').text('Modify Employee Profile Record');
+            $('#modalEmployee').modal('show');
+        }
+
+        // Reset employee modal parameters when opening for a new entry
+        $('#modalEmployee').on('show.bs.modal', function(e) {
+            if (e.relatedTarget) { // Triggered by 'Add New Record' button
+                $('#formAddEmp')[0].reset();
+                $('#empId').val('');
+                $('#empEmployeeId').prop('disabled', false);
+                $('#employeeModalTitle').text('Map Core Employee Profile Record');
+            }
+        });
+
+        function deleteEmployee(id) {
+            Swal.fire({
+                title: 'Delete Employee Record?',
+                text: 'This operation will remove the employee from directory lists.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                confirmButtonText: 'Confirm Delete'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: API_BASE + `employees/${id}/`,
+                        type: 'DELETE',
+                        success: function() {
+                            Swal.fire('Deleted!', 'Employee has been removed.', 'success');
+                            loadEmployees();
+                        },
+                        error: function() {
+                            Swal.fire('Error', 'Could not delete employee record.', 'error');
+                        }
+                    });
+                }
+            });
+        }
+
+        // ==================== FORM SUBMISSIONS ====================
+        function setupFormSubmissions() {
+            // Employee creation/updates
+            $('#formAddEmp').on('submit', function(e) {
+                e.preventDefault();
+                const id = $('#empId').val();
+                
+                const payload = {
+                    employee_id: $('#empEmployeeId').val(),
+                    department: parseInt($('#empDepartment').val()),
+                    first_name: $('#empFirstName').val(),
+                    last_name: $('#empLastName').val(),
+                    email: $('#empEmail').val(),
+                    phone: $('#empPhone').val(),
+                    designation: $('#empDesignation').val(),
+                    salary: parseFloat($('#empSalary').val()),
+                    joining_date: $('#empJoiningDate').val(),
+                    status: $('#empStatus').is(':checked')
+                };
+
+                const url = id ? API_BASE + `employees/${id}/` : API_BASE + 'employees/';
+                const type = id ? 'PUT' : 'POST';
+
+                $.ajax({
+                    url: url,
+                    type: type,
+                    data: JSON.stringify(payload),
+                    contentType: 'application/json',
+                    success: function() {
+                        $('#modalEmployee').modal('hide');
+                        Swal.fire('Success', id ? 'Employee record updated.' : 'Employee mapped successfully.', 'success');
+                        loadEmployees();
+                    },
+                    error: function(xhr) {
+                        let msg = 'Validation constraints violation occurred.';
+                        if (xhr.responseJSON) {
+                            msg = Object.keys(xhr.responseJSON).map(key => `${key}: ${xhr.responseJSON[key]}`).join('<br>');
+                        }
+                        Swal.fire('Error', msg, 'error');
+                    }
+                });
+            });
+
+            // Department creation
+            $('#formAddDept').on('submit', function(e) {
+                e.preventDefault();
+                const payload = {
+                    department_name: $('#deptName').val(),
+                    description: $('#deptDescription').val()
+                };
+
+                $.ajax({
+                    url: API_BASE + 'departments/',
+                    type: 'POST',
+                    data: JSON.stringify(payload),
+                    contentType: 'application/json',
+                    success: function() {
+                        $('#modalDept').modal('hide');
+                        $('#formAddDept')[0].reset();
+                        Swal.fire('Created', 'New operational unit provisioned successfully.', 'success');
+                        loadDepartments();
+                    },
+                    error: function(xhr) {
+                        let msg = 'Validation error occurred.';
+                        if (xhr.responseJSON) {
+                            msg = Object.keys(xhr.responseJSON).map(key => `${key}: ${xhr.responseJSON[key]}`).join('<br>');
+                        }
+                        Swal.fire('Failed', msg, 'error');
+                    }
+                });
+            });
+        }
+
+        // ==================== SEND EMAIL MODULE ====================
+        let currentFilterDeptId = 'all';
+
+        function loadSendEmailPanel() {
+            // Load templates and populate employee target panels
+            loadDepartments(function() {
+                $.ajax({
+                    url: API_BASE + 'employees/',
+                    type: 'GET',
+                    success: function(data) {
+                        globalEmployees = data;
+                        renderSendEmailEmployeeList(data);
+                    }
+                });
+            });
+        }
+
+        function renderSendEmailEmployeeList(employees) {
+            const container = $('#view-send-email div[style*="max-height:500px"]');
+            container.empty();
+
+            if (employees.length === 0) {
+                container.html('<div class="text-center text-muted py-4">No employees registered.</div>');
+                return;
+            }
+
+            employees.forEach(emp => {
+                const isSelected = selectedEmployeeIds.includes(emp.id) ? 'checked' : '';
+                const deptName = emp.department_name || 'Unassigned';
+                
+                const card = `
+                    <div class="card employee-card mb-3 p-3 rounded-4" data-dept="${emp.department}">
+                        <div class="d-flex">
+                            <input type="checkbox" class="form-check-input employee-checkbox me-3 mt-1" data-id="${emp.id}" ${isSelected}>
+                            <div>
+                                <div class="d-flex align-items-center gap-2 mb-2">
+                                    <h5 class="fw-bold m-0 employee-name">${emp.first_name} ${emp.last_name}</h5>
+                                    <span class="badge bg-success-subtle text-success rounded-pill">${deptName}</span>
+                                </div>
+                                <p class="text-muted mb-2 employee-email">${emp.email} · ${emp.phone}</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.append(card);
+            });
+
+            // Re-apply event listeners for checkboxes
+            $('.employee-checkbox').on('change', function() {
+                const id = parseInt($(this).data('id'));
+                if ($(this).is(':checked')) {
+                    if (!selectedEmployeeIds.includes(id)) selectedEmployeeIds.push(id);
+                } else {
+                    selectedEmployeeIds = selectedEmployeeIds.filter(x => x !== id);
+                }
+                updateSelectedCountUI();
+            });
+
+            updateSelectedCountUI();
+        }
+
+        let selectedEmployeeIds = [];
+
+        function updateSelectedCountUI() {
+            $('#selectedCount').text(`${selectedEmployeeIds.length} selected`);
+        }
+
+        function filterEmailEmployeeList(deptId) {
+            currentFilterDeptId = deptId;
+            if (deptId === 'all') {
+                $('.employee-card').show();
+            } else {
+                $('.employee-card').hide();
+                $(`.employee-card[data-dept="${deptId}"]`).show();
+            }
+        }
+
+        function setupEmailModuleHandlers() {
+            // Filter search logic
+            $('#employeeSearch').on('keyup', function() {
+                const val = $(this).val().toLowerCase();
+                $('.employee-card').filter(function() {
+                    const matchText = $(this).find('.employee-name').text().toLowerCase() + ' ' + 
+                                     $(this).find('.employee-email').text().toLowerCase();
+                    const matchDept = currentFilterDeptId === 'all' || $(this).data('dept') == currentFilterDeptId;
+                    $(this).toggle(matchText.indexOf(val) > -1 && matchDept);
+                });
+            });
+
+            // Select all handler
+            $('#selectAllBtn').on('click', function(e) {
+                e.preventDefault();
+                $('.employee-checkbox:visible').each(function() {
+                    $(this).prop('checked', true);
+                    const id = parseInt($(this).data('id'));
+                    if (!selectedEmployeeIds.includes(id)) selectedEmployeeIds.push(id);
+                });
+                updateSelectedCountUI();
+            });
+
+            // Clear all handler
+            $('#clearAllBtn').on('click', function(e) {
+                e.preventDefault();
+                $('.employee-checkbox:visible').each(function() {
+                    $(this).prop('checked', false);
+                    const id = parseInt($(this).data('id'));
+                    selectedEmployeeIds = selectedEmployeeIds.filter(x => x !== id);
+                });
+                updateSelectedCountUI();
+            });
+
+            // Template fill listener
+            $('#emailTemplate').on('change', function() {
+                const tpl = $(this).val();
+                let subject = '';
+                let message = '';
+
+                if (tpl === 'welcome') {
+                    subject = 'Welcome to the Team!';
+                    message = 'Hi {{first_name}},\n\nWelcome to the company! We are thrilled to have you join our organization. Your employee ID is {{employee_id}}.\n\nBest regards,\nAdministration';
+                } else if (tpl === 'meeting') {
+                    subject = 'Upcoming Team Review Sync Meeting';
+                    message = 'Hi {{first_name}},\n\nThis is a quick reminder regarding our review meeting scheduled for tomorrow. Please be prepared with your reports.\n\nBest,\nManagement';
+                } else if (tpl === 'project') {
+                    subject = 'Project Deployment Status Parameters Update';
+                    message = 'Hello {{first_name}},\n\nPlease review the deployment framework documentation and update your unit modules accordingly.\n\nThanks,\nCore Engineering Team';
+                } else if (tpl === 'holiday') {
+                    subject = 'Notice of National Holiday Office Closure';
+                    message = 'Hi {{first_name}},\n\nPlease note that our corporate offices will remain closed tomorrow in observance of the national holiday.\n\nWarm regards,\nHR Department';
+                }
+
+                $('#emailSubject').val(subject);
+                $('#emailMessage').val(message);
+            });
+
+            // Form Submit Send Email Action
+            $('#formSendMail').on('submit', function(e) {
+                e.preventDefault();
+                
+                if (selectedEmployeeIds.length === 0) {
+                    Swal.fire('No Targets Selected', 'Please check at least one employee from the list.', 'warning');
+                    return;
+                }
+
+                const baseSubject = $('#emailSubject').val();
+                const baseMessage = $('#emailMessage').val();
+
+                Swal.fire({
+                    title: 'Sending Communications',
+                    text: `Queueing ${selectedEmployeeIds.length} emails. Proceed?`,
+                    icon: 'info',
+                    showCancelButton: true,
+                    confirmButtonText: 'Dispatched Queue',
+                    confirmButtonColor: '#16a34a'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        sendBatchEmails(baseSubject, baseMessage);
+                    }
+                });
+            });
+        }
+
+        // Loop and trigger individual email dispatches to backend endpoint
+        function sendBatchEmails(subjectTpl, messageTpl) {
+            let processed = 0;
+            let successCount = 0;
+            const total = selectedEmployeeIds.length;
+
+            Swal.fire({
+                title: 'Processing Dispatch...',
+                html: `Sent <b>0</b> of ${total} records.`,
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            selectedEmployeeIds.forEach(empId => {
+                const emp = globalEmployees.find(e => e.id === empId);
+                if (!emp) {
+                    checkProgress();
+                    return;
+                }
+
+                // Render dynamic text templates fields logic
+                let renderedSubject = subjectTpl.replace(/{{first_name}}/g, emp.first_name).replace(/{{last_name}}/g, emp.last_name).replace(/{{employee_id}}/g, emp.employee_id);
+                
+                let renderedMessage = messageTpl.replace(/{{first_name}}/g, emp.first_name).replace(/{{last_name}}/g, emp.last_name).replace(/{{employee_id}}/g, emp.employee_id);
+
+                const payload = {
+                    employee: emp.id,
+                    recipient_email: emp.email,
+                    subject: renderedSubject,
+                    message: renderedMessage
+                };
+
+                $.ajax({
+                    url: API_BASE + 'emails/',
+                    type: 'POST',
+                    data: JSON.stringify(payload),
+                    contentType: 'application/json',
+                    success: function() {
+                        successCount++;
+                        checkProgress();
+                    },
+                    error: function() {
+                        checkProgress();
+                    }
+                });
+            });
+
+            function checkProgress() {
+                processed++;
+                Swal.getHtmlContainer().querySelector('b').textContent = processed;
+                
+                if (processed === total) {
+                    Swal.close();
+                    Swal.fire({
+                        title: 'Transmission Complete',
+                        text: `Successfully dispatched ${successCount} out of ${total} emails.`,
+                        icon: successCount === total ? 'success' : 'warning'
+                    });
+                    
+                    // Reset fields
+                    selectedEmployeeIds = [];
+                    updateSelectedCountUI();
+                    $('.employee-checkbox').prop('checked', false);
+                    $('#formSendMail')[0].reset();
+                }
+            }
+        }
+
+        // ==================== HISTORY LOGS MODULE ====================
+        function loadHistoryLogs() {
+            $.ajax({
+                url: API_BASE + 'history/',
+                type: 'GET',
+                success: function(data) {
+                    renderHistoryTable(data);
+                },
+                error: function() {
+                    Swal.fire('Error', 'Failed to retrieve audit log history.', 'error');
+                }
+            });
+        }
+
+        function renderHistoryTable(logs) {
+            const table = $('#tableHistory').DataTable();
+            table.clear();
+
+            logs.forEach(log => {
+                const formattedTime = log.sent_at ? new Date(log.sent_at).toLocaleString() : '--';
+                const stateBadge = log.status === 'Sent' ? 
+                    `<span class="badge bg-success-subtle text-success">Sent</span>` : 
+                    `<span class="badge bg-danger-subtle text-danger">Failed</span>`;
+
+                table.row.add([
+                    `<div class="fw-semibold">${log.recipient_email}</div>`,
+                    `<div class="text-truncate" style="max-width:250px;"><b>${log.subject}</b> - ${log.message}</div>`,
+                    stateBadge,
+                    formattedTime,
+                    `<button class="btn btn-light btn-sm text-primary" onclick="retrySingleLog('${log.recipient_email}', '${log.subject.replace(/'/g, "\\'")}', '${log.message.replace(/'/g, "\\'")}', ${log.employee})"><i data-lucide="refresh-cw" style="width:12px;"></i> Re-send</button>`
+                ]);
+            });
+            table.draw();
+            table.columns.adjust();
+            lucide.createIcons();
+        }
+
+        function retrySingleLog(recipientEmail, subject, message, employeeId) {
+            const payload = {
+                employee: employeeId,
+                recipient_email: recipientEmail,
+                subject: subject,
+                message: message
+            };
+
+            $.ajax({
+                url: API_BASE + 'emails/',
+                type: 'POST',
+                data: JSON.stringify(payload),
+                contentType: 'application/json',
+                success: function() {
+                    Swal.fire('Resent Successfully', 'The email has been queued and sent.', 'success');
+                    loadHistoryLogs();
+                },
+                error: function(xhr) {
+                    Swal.fire('Retry Failed', 'An error occurred during re-transmission.', 'error');
+                }
+            });
+        }
+
+        // Mocks analytical dashboards setup
+        function initializeAnalyticalGraphEngines() {}
+    </script>
+    {% endverbatim %}

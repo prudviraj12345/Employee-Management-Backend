@@ -1,0 +1,33 @@
+<!-- 8. CONFIGURATION SETTINGS VIEW -->
+<div id="view-settings" class="app-view">
+    <div class="profile-shell">
+        <div class="profile-card">
+            <div class="card ep-card p-4 p-md-5 bg-white">
+                <div class="text-center mb-4">
+                    <div class="avatar-tag mx-auto mb-3 text-uppercase" style="width: 64px; height: 64px; font-size: 1.4rem; font-weight: 700; line-height: 64px; display: flex; align-items: center; justify-content: center;" id="userProfileInitials">AD</div>
+                    <h4 class="fw-bold m-0" id="userProfileName">System Admin</h4>
+                    <p class="text-muted small mt-1">Manage your console account credentials</p>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label ep-label">Username</label>
+                    <input type="text" class="form-control bg-light" id="profileUsername" value="Admin" readonly>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label ep-label">Email Address</label>
+                    <input type="email" class="form-control bg-light" id="profileEmail" value="admin@company.com" readonly>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label ep-label">Security Credentials Status</label>
+                    <input type="text" class="form-control bg-light text-muted mono" value="AUTHENTICATED via DRF TOKEN" readonly>
+                </div>
+                
+                <button class="btn btn-outline-secondary w-100 mt-3" disabled>
+                    <i data-lucide="lock" style="width: 14px; height: 14px; display: inline-block; vertical-align: middle;" class="me-2"></i> Account Managed via Directory Services
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

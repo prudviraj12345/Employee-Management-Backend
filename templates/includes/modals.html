@@ -1,0 +1,171 @@
+<div class="modal fade" id="modalEmployee" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content border-0 shadow">
+
+            <div class="modal-header bg-light">
+                <h5 class="modal-title fw-bold" id="employeeModalTitle">
+                    Map Core Employee Profile Record
+                </h5>
+                <button type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal">
+                </button>
+            </div>
+
+            <div class="modal-body">
+
+                <form id="formAddEmp">
+                    <input type="hidden" id="empId" value="">
+                    <div class="row">
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">
+                                Employee ID
+                            </label>
+                            <input type="text"
+                                   class="form-control"
+                                   id="empEmployeeId"
+                                   placeholder="EMP001"
+                                   required>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">
+                                Department
+                            </label>
+
+                            <select class="form-select" id="empDepartment" required>
+                                <option value="">
+                                    Select Department
+                                </option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">
+                                First Name
+                            </label>
+                            <input type="text"
+                                   class="form-control"
+                                   id="empFirstName"
+                                   required>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">
+                                Last Name
+                            </label>
+                            <input type="text"
+                                   class="form-control"
+                                   id="empLastName"
+                                   required>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">
+                                Email
+                            </label>
+                            <input type="email"
+                                   class="form-control"
+                                   id="empEmail"
+                                   required>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">
+                                Phone
+                            </label>
+                            <input type="tel"
+                                   class="form-control"
+                                   id="empPhone"
+                                   required>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">
+                                Designation
+                            </label>
+                            <select class="form-select" id="empDesignation" required>
+                                <option value="SE">Software Engineer</option>
+                                <option value="SSE">Senior Software Engineer</option>
+                                <option value="MGR">Manager</option>
+                                <option value="HR">HR Executive</option>
+                                <option value="INT">Intern</option>
+                                <option value="OTH">Other</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">
+                                Salary
+                            </label>
+                            <input type="number"
+                                   class="form-control"
+                                   id="empSalary"
+                                   placeholder="50000"
+                                   required>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">
+                                Joining Date
+                            </label>
+                            <input type="date"
+                                   class="form-control"
+                                   id="empJoiningDate"
+                                   required>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label d-block">
+                                Status
+                            </label>
+
+                            <div class="form-check form-switch mt-2">
+                                <input class="form-check-input"
+                                       type="checkbox"
+                                       id="empStatus"
+                                       checked>
+
+                                <label class="form-check-label">
+                                    Active Employee
+                                </label>
+                            </div>
+                        </div>
+
+                    </div>
+
+<div class="modal fade" id="modalDept" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-light"><h5 class="modal-title fw-bold">Provision New Organizational Unit</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <form id="formAddDept">
+                        <div class="mb-3">
+                            <label class="form-label small text-secondary">Department Name</label>
+                            <input type="text" class="form-control" id="deptName" required placeholder="Quality Assurance">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small text-secondary">Department Description (min 10 characters)</label>
+                            <textarea class="form-control" id="deptDescription" required placeholder="Quality Assurance and Testing unit..."></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-success w-100 py-2">Initialize Allocation</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+<div class="modal fade" id="modalTemplate" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-light"><h5 class="modal-title fw-bold">Construct Base Transmission Content Template</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <form id="formAddTemplate" onsubmit="handleModalSubmit(event, 'modalTemplate', 'New template profile saved.')">
+                        <div class="mb-3"><label class="form-label small text-secondary">Template Structural Alias</label><input type="text" class="form-control" required placeholder="Engineering Retro Dispatch"></div>
+                        <div class="mb-3"><label class="form-label small text-secondary">Parsed Dynamic Subject Line</label><input type="text" class="form-control" required placeholder="System Status Alert: {{event_id}} executed successfully"></div>
+                        <div class="mb-3"><label class="form-label small text-secondary">Core Template Macro Content Text</label><textarea class="form-control" rows="5" placeholder="Body payload mapping context..."></textarea></div>
+                        <button type="submit" class="btn btn-success w-100 py-2">Save Content Configuration Blueprint</button>
+                    </form>
+                </div>
+            </div>
+        </div>

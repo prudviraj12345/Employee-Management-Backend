@@ -1,0 +1,79 @@
+<!-- 1. DASHBOARD COMPONENT VIEW -->
+            <div id="view-dashboard" class="app-view">
+                <div class="ep-page-head">
+                    <div>
+                        <span class="ep-eyebrow">Overview</span>
+                        <h4 class="ep-page-title m-0">Dashboard</h4>
+                    </div>
+                    <span class="badge bg-success-subtle border px-3 py-2 rounded-pill">System Status: Active</span>
+                </div>
+
+                <!-- Stat Cards Row -->
+                <div class="row g-3 mb-4">
+                    <div class="col-12 col-sm-6 col-xl-3">
+                        <div class="card stat-card p-3 bg-white">
+                            <div class="postmark"><svg viewBox="0 0 24 24"></svg></div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="stat-label mb-1">Total Employees</h6>
+                                    <h3 class="stat-value m-0" id="dash-count-emp">1,248</h3>
+                                </div>
+                                <div class="stat-icon-box bg-primary-subtle"><i data-lucide="users"></i></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-sm-6 col-xl-3">
+                        <div class="card stat-card p-3 bg-white">
+                            <div class="postmark"><svg viewBox="0 0 24 24"></svg></div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="stat-label mb-1">Departments</h6>
+                                    <h3 class="stat-value m-0" id="dash-count-dept">8</h3>
+                                </div>
+                                <div class="stat-icon-box bg-info-subtle"><i data-lucide="building"></i></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-sm-6 col-xl-3">
+                        <div class="card stat-card p-3 bg-white">
+                            <div class="postmark"><svg viewBox="0 0 24 24"></svg></div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="stat-label mb-1">Emails Today</h6>
+                                    <h3 class="stat-value m-0" id="dash-count-sent">14,205</h3>
+                                </div>
+                                <div class="stat-icon-box bg-success-subtle"><i data-lucide="check-circle"></i></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-sm-6 col-xl-3">
+                        <div class="card stat-card p-3 bg-white">
+                            <div class="postmark"><svg viewBox="0 0 24 24"></svg></div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="stat-label mb-1">Delivery Failures</h6>
+                                    <h3 class="stat-value m-0 text-danger" id="dash-count-failed">12</h3>
+                                </div>
+                                <div class="stat-icon-box bg-danger-subtle"><i data-lucide="alert-triangle"></i></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Graphs Section -->
+                <div class="row g-4">
+                    <div class="col-12 col-lg-8">
+                        <div class="card ep-card p-4 bg-white h-100">
+                            <h6 class="fw-bold text-secondary mb-3">Email Transmission Volume Over Time</h6>
+                            <div style="position: relative; height: 300px;"><canvas id="chartDashboardVolume"></canvas></div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-lg-4">
+                        <div class="card ep-card p-4 bg-white h-100">
+                            <h6 class="fw-bold text-secondary mb-3">Metrics by Corporate Department</h6>
+                            <div style="position: relative; height: 300px;"><canvas id="chartDashboardDept"></canvas></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2.
