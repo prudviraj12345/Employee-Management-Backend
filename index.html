@@ -180,6 +180,10 @@
             font-weight: 600;
             color: #475569;
         }
+        .nav-link-custom svg, .nav-link-custom i {
+            width: 20px;
+            height: 20px;
+        }
     </style>
 </head>
 <body>
@@ -197,11 +201,11 @@
             <form id="loginForm" onsubmit="handleSystemLogin(event)">
                 <div class="mb-3">
                     <label class="form-label small fw-medium text-secondary">Username / Server Email</label>
-                    <input type="email" class="form-control" id="loginEmail" placeholder="admin@company.com" required value="admin@company.com">
+                    <input type="text" class="form-control" id="loginEmail" placeholder="admin12123" required value="admin12123">
                 </div>
                 <div class="mb-3">
                     <label class="form-label small fw-medium text-secondary">Secured Password</label>
-                    <input type="password" class="form-control" id="loginPassword" placeholder="••••••••" required value="password123">
+                    <input type="password" class="form-control" id="loginPassword" placeholder="••••••••" required value="passward123">
                 </div>
                 <button type="submit" class="btn btn-success w-100 py-2 fw-semibold mt-2">Sign In</button>
             </form>
@@ -215,7 +219,7 @@
         <nav class="navbar navbar-custom d-flex align-items-center justify-content-between">
             <div class="d-flex align-items-center gap-3">
                 <div class="bg-light p-2 rounded-circle d-flex align-items-center justify-content-center">
-                    <i data-lucide="plane" class="text-secondary" style="transform: rotate(-45deg); width:20px; height:20px;"></i>
+                    <i data-lucide="send" class="text-secondary" style="transform: rotate(-45deg); width:20px; height:20px;"></i>
                 </div>
                 <div>
                     <span class="h6 fw-bold m-0 text-uppercase tracking-wider">Enterprise Email Portal</span>
@@ -1054,8 +1058,9 @@
     <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
 
+    {% verbatim %}
     <script>
         // API Base URL config
         const API_BASE = window.location.protocol.startsWith('http') ? '/api/' : 'http://127.0.0.1:8000/api/';
@@ -1657,15 +1662,9 @@
                 }
 
                 // Render dynamic text templates fields logic
-                let renderedSubject = subjectTpl
-                    .replace(/{{first_name}}/g, emp.first_name)
-                    .replace(/{{last_name}}/g, emp.last_name)
-                    .replace(/{{employee_id}}/g, emp.employee_id);
+                let renderedSubject = subjectTpl.replace(/{{first_name}}/g, emp.first_name).replace(/{{last_name}}/g, emp.last_name).replace(/{{employee_id}}/g, emp.employee_id);
                 
-                let renderedMessage = messageTpl
-                    .replace(/{{first_name}}/g, emp.first_name)
-                    .replace(/{{last_name}}/g, emp.last_name)
-                    .replace(/{{employee_id}}/g, emp.employee_id);
+                let renderedMessage = messageTpl.replace(/{{first_name}}/g, emp.first_name).replace(/{{last_name}}/g, emp.last_name).replace(/{{employee_id}}/g, emp.employee_id);
 
                 const payload = {
                     employee: emp.id,
@@ -1772,5 +1771,6 @@
         // Mocks analytical dashboards setup
         function initializeAnalyticalGraphEngines() {}
     </script>
+    {% endverbatim %}
 </body>
 </html>
