@@ -82,12 +82,12 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 
-# Database Configuration (Neon PostgreSQL)
+# Database Configuration (Supabase PostgreSQL)
 
-# Dynamic Database configuration (from env variable or fallback Neon PostgreSQL)
+# Dynamic Database configuration (from env variable or fallback Supabase PostgreSQL)
 DATABASE_URL = os.getenv(
     'DATABASE_URL',
-    'postgresql://neondb_owner:npg_TbOog0mVU6at@ep-twilight-king-atb6dd43-pooler.c-9.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require'
+    'postgresql://postgres.qeozwfactzdoiawzdryt:Yd2MZLV%2FgQa6f%24g@aws-0-ap-northeast-1.pooler.supabase.com:6543/postgres?sslmode=require'
 )
 
 DATABASES = {
