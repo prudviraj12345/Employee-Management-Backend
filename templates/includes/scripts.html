@@ -1194,14 +1194,13 @@
         });
     }
 
-    // Loop and trigger individual email dispatches to backend endpoint sequentially
+    // Send all selected employees in one request via batch_send endpoint
     async function sendBatchEmails(subjectTpl, messageTpl) {
-        let successCount = 0;
         const total = selectedEmployeeIds.length;
 
         Swal.fire({
             title: 'Processing Dispatch...',
-            html: `Sent <b>0</b> of ${total} records.`,
+            html: `Sending to <b>${total}</b> recipient${total > 1 ? 's' : ''}. Please wait...`,
             allowOutsideClick: false,
             didOpen: () => {
                 Swal.showLoading();
@@ -1211,66 +1210,33 @@
         const fileInput = document.getElementById('emailAttachment');
         const attachmentFile = (fileInput && fileInput.files.length > 0) ? fileInput.files[0] : null;
 
-        let processedCount = 0;
-
-        function updateProgress(processed) {
-            const b = Swal.getHtmlContainer() ? Swal.getHtmlContainer().querySelector('b') : null;
-            if (b) {
-                b.textContent = processed;
-            }
+        // Build a single FormData payload: employee IDs + raw templates (server renders placeholders)
+        const formData = new FormData();
+        selectedEmployeeIds.forEach(id => formData.append('employees', id));
+        formData.append('subject', subjectTpl);
+        formData.append('message', messageTpl);
+        if (attachmentFile) {
+            formData.append('attachment', attachmentFile);
         }
 
-        const emailPromises = selectedEmployeeIds.map(async (empId) => {
-            const emp = globalEmployees.find(e => e.id === empId);
-            if (!emp) {
-                processedCount++;
-                updateProgress(processedCount);
-                return;
+        let successCount = 0;
+        try {
+            const response = await $.ajax({
+                url: API_BASE + 'emails/batch_send/',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                timeout: 120000  // 2-minute client-side timeout for large batches
+            });
+            if (response && typeof response.success_count !== 'undefined') {
+                successCount = response.success_count;
             }
-
-            // Render placeholders
-            const renderedSubject = subjectTpl
-                .replace(/{{first_name}}/g, emp.first_name)
-                .replace(/{{last_name}}/g, emp.last_name)
-                .replace(/{{employee_id}}/g, emp.employee_id);
-
-            const renderedMessage = messageTpl
-                .replace(/{{first_name}}/g, emp.first_name)
-                .replace(/{{last_name}}/g, emp.last_name)
-                .replace(/{{employee_id}}/g, emp.employee_id);
-
-            const formData = new FormData();
-            formData.append('employee', emp.id);
-            formData.append('recipient_email', emp.email);
-            formData.append('subject', renderedSubject);
-            formData.append('message', renderedMessage);
-            if (attachmentFile) {
-                formData.append('attachment', attachmentFile);
-            }
-
-            try {
-                const response = await $.ajax({
-                    url: API_BASE + 'emails/',
-                    type: 'POST',
-                    data: formData,
-                    processData: false,
-                    contentType: false
-                });
-
-                if (response && response.status === 'Sent') {
-                    successCount++;
-                } else {
-                    console.error("Transmission failed for " + emp.email + ": status is " + (response ? response.status : 'unknown'));
-                }
-            } catch (err) {
-                console.error("Failed to send email to " + emp.email, err);
-            } finally {
-                processedCount++;
-                updateProgress(processedCount);
-            }
-        });
-
-        await Promise.all(emailPromises);
+        } catch (err) {
+            console.error('Batch dispatch failed', err);
+            Swal.fire('Error', 'A server error occurred during batch transmission. Please try again.', 'error');
+            return;
+        }
 
         Swal.close();
         Swal.fire({
@@ -1279,7 +1245,7 @@
             icon: successCount === total ? 'success' : 'warning'
         });
 
-        // Reset fields
+        // Reset UI state
         selectedEmployeeIds = [];
         updateSelectedCountUI();
         $('.employee-checkbox').prop('checked', false);
