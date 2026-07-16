@@ -41,7 +41,6 @@
     // Initialize elements on load
     $(document).ready(function () {
         lucide.createIcons();
-        loadPublicStats();
         checkAuthState();
         setupNavigationHandlers();
         setupUiHandlers();
@@ -51,21 +50,6 @@
         setupTemplateHandlers();
         loadTemplates(null, false);
     });
-
-    function loadPublicStats() {
-        $.ajax({
-            url: API_BASE + 'public-stats/',
-            type: 'GET',
-            success: function(data) {
-                $('#statEmployeesSynced').text(data.employees_synced);
-                $('#statSentToday').text(data.sent_today);
-                $('#statDeliveryRate').text(data.delivery_rate);
-            },
-            error: function() {
-                console.error("Failed to retrieve public statistics.");
-            }
-        });
-    }
 
     function getDataTable(selector, customOptions = {}) {
         if ($.fn.DataTable.isDataTable(selector)) {
@@ -418,22 +402,6 @@
                     Swal.fire('Password Change Failed', msg, 'error');
                 }
             });
-        });
-
-        // Toggle password visibility handler
-        $('.toggle-password').on('click', function () {
-            const targetSelector = $(this).attr('data-target');
-            const targetInput = $(targetSelector);
-            const icon = $(this).find('i');
-            
-            if (targetInput.attr('type') === 'password') {
-                targetInput.attr('type', 'text');
-                icon.attr('data-lucide', 'eye-off');
-            } else {
-                targetInput.attr('type', 'password');
-                icon.attr('data-lucide', 'eye');
-            }
-            lucide.createIcons(); // Redraw Lucide icons
         });
     }
 
@@ -1139,68 +1107,16 @@
                 }
             });
         });
-
-        // Preview email handler
-        $('#emailPreviewBtn').on('click', function(e) {
-            e.preventDefault();
-            
-            if (selectedEmployeeIds.length === 0) {
-                Swal.fire('No Targets Selected', 'Please check at least one employee from the list to preview.', 'warning');
-                return;
-            }
-
-            const subjectTpl = $('#emailSubject').val().trim();
-            const messageTpl = $('#emailMessage').val().trim();
-
-            if (!subjectTpl || !messageTpl) {
-                Swal.fire('Empty Fields', 'Please enter a subject and message to preview.', 'warning');
-                return;
-            }
-
-            // Get first selected employee details
-            const empId = selectedEmployeeIds[0];
-            const emp = globalEmployees.find(e => e.id === empId);
-            if (!emp) return;
-
-            // Render placeholders
-            const renderedSubject = subjectTpl
-                .replace(/{{first_name}}/g, emp.first_name)
-                .replace(/{{last_name}}/g, emp.last_name)
-                .replace(/{{employee_id}}/g, emp.employee_id);
-
-            const renderedMessage = messageTpl
-                .replace(/{{first_name}}/g, emp.first_name)
-                .replace(/{{last_name}}/g, emp.last_name)
-                .replace(/{{employee_id}}/g, emp.employee_id);
-
-            const fileInput = document.getElementById('emailAttachment');
-            const attachmentName = (fileInput && fileInput.files.length > 0) ? fileInput.files[0].name : 'None';
-
-            Swal.fire({
-                title: 'Transmission Preview (First Recipient)',
-                html: `
-                    <div class="text-start" style="font-size:14px; line-height: 1.5;">
-                        <div class="mb-2"><b>To:</b> <span class="text-muted">${emp.first_name} ${emp.last_name} (${emp.email})</span></div>
-                        <div class="mb-2"><b>Subject:</b> <span class="mono border p-1 rounded d-block bg-light">${renderedSubject}</span></div>
-                        <div class="mb-2"><b>Message Body:</b>
-                            <div class="mono border p-2 rounded bg-light" style="white-space: pre-wrap; max-height: 250px; overflow-y: auto;">${renderedMessage}</div>
-                        </div>
-                        <div><b>Attachment:</b> <span class="badge bg-secondary-subtle text-secondary">${attachmentName}</span></div>
-                    </div>
-                `,
-                confirmButtonText: 'Looks Good',
-                confirmButtonColor: '#16a34a'
-            });
-        });
     }
 
-    // Send all selected employees in one request via batch_send endpoint
+    // Loop and trigger individual email dispatches to backend endpoint sequentially
     async function sendBatchEmails(subjectTpl, messageTpl) {
+        let successCount = 0;
         const total = selectedEmployeeIds.length;
 
         Swal.fire({
-            title: 'Queuing Dispatch...',
-            html: `Submitting <b>${total}</b> recipient${total > 1 ? 's' : ''} for delivery...`,
+            title: 'Processing Dispatch...',
+            html: `Sent <b>0</b> of ${total} records.`,
             allowOutsideClick: false,
             didOpen: () => {
                 Swal.showLoading();
@@ -1210,60 +1126,66 @@
         const fileInput = document.getElementById('emailAttachment');
         const attachmentFile = (fileInput && fileInput.files.length > 0) ? fileInput.files[0] : null;
 
-        // Build a single FormData payload: employee IDs + raw templates (server renders placeholders)
-        const formData = new FormData();
-        selectedEmployeeIds.forEach(id => formData.append('employees', id));
-        formData.append('subject', subjectTpl);
-        formData.append('message', messageTpl);
-        if (attachmentFile) {
-            formData.append('attachment', attachmentFile);
+        for (let i = 0; i < total; i++) {
+            const empId = selectedEmployeeIds[i];
+            const emp = globalEmployees.find(e => e.id === empId);
+            if (!emp) {
+                updateProgress(i + 1);
+                continue;
+            }
+
+            // Render dynamic text templates fields logic
+            let renderedSubject = subjectTpl.replace(/{{first_name}}/g, emp.first_name).replace(/{{last_name}}/g, emp.last_name).replace(/{{employee_id}}/g, emp.employee_id);
+
+            let renderedMessage = messageTpl.replace(/{{first_name}}/g, emp.first_name).replace(/{{last_name}}/g, emp.last_name).replace(/{{employee_id}}/g, emp.employee_id);
+
+            const formData = new FormData();
+            formData.append('employee', emp.id);
+            formData.append('recipient_email', emp.email);
+            formData.append('subject', renderedSubject);
+            formData.append('message', renderedMessage);
+            if (attachmentFile) {
+                formData.append('attachment', attachmentFile);
+            }
+
+            try {
+                await $.ajax({
+                    url: API_BASE + 'emails/',
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false
+                });
+                successCount++;
+            } catch (err) {
+                console.error("Failed to send email to " + emp.email, err);
+            }
+
+            updateProgress(i + 1);
         }
 
-        try {
-            const response = await $.ajax({
-                url: API_BASE + 'emails/batch_send/',
-                type: 'POST',
-                data: formData,
-                processData: false,
-                contentType: false,
-                timeout: 30000  // 30s — just for the queuing phase (should return in <1s)
-            });
+        Swal.close();
+        Swal.fire({
+            title: 'Transmission Complete',
+            text: `Successfully dispatched ${successCount} out of ${total} emails.`,
+            icon: successCount === total ? 'success' : 'warning'
+        });
 
-            const queued = (response && response.queued) ? response.queued : total;
-
-            Swal.close();
-            Swal.fire({
-                title: 'Emails Queued!',
-                html: `<b>${queued}</b> email${queued > 1 ? 's are' : ' is'} being sent in the background.<br><small class="text-muted">Check Email History in a few seconds to see delivery status.</small>`,
-                icon: 'success',
-                timer: 4000,
-                timerProgressBar: true,
-                showConfirmButton: true,
-                confirmButtonText: 'OK'
-            });
-
-            // Auto-refresh history after a delay to pick up sent statuses
-            setTimeout(() => {
-                loadHistoryLogs();
-            }, 8000);
-
-        } catch (err) {
-            console.error('Batch dispatch failed', err);
-            Swal.close();
-            Swal.fire('Error', 'Could not queue emails. Please check your connection and try again.', 'error');
-            return;
-        }
-
-        // Reset UI state immediately
+        // Reset fields
         selectedEmployeeIds = [];
         updateSelectedCountUI();
         $('.employee-checkbox').prop('checked', false);
         $('#formSendMail')[0].reset();
+
+        function updateProgress(processed) {
+            const b = Swal.getHtmlContainer() ? Swal.getHtmlContainer().querySelector('b') : null;
+            if (b) {
+                b.textContent = processed;
+            }
+        }
     }
 
     // ==================== HISTORY LOGS MODULE ====================
-    let historyLogsData = [];
-
     function loadHistoryLogs() {
         setTableMessage('#tableHistory', 'Loading history...', 5);
 
@@ -1280,8 +1202,6 @@
     }
 
     function renderHistoryTable(logs) {
-        historyLogsData = logs; // Store globally
-
         const table = getDataTable('#tableHistory', {
             order: [[3, 'desc']],
             columnDefs: [
@@ -1302,7 +1222,7 @@
             return;
         }
 
-        logs.forEach((log, index) => {
+        logs.forEach(log => {
             const formattedTime = log.sent_at ? new Date(log.sent_at).toLocaleString() : '--';
             const sortableTime = log.sent_at ? `<span class="d-none">${log.sent_at}</span>${formattedTime}` : `<span class="d-none">0000-00-00</span>--`;
             const stateBadge = log.status === 'Sent' ?
@@ -1314,19 +1234,13 @@
                 `<div class="text-truncate" style="max-width:250px;"><b>${log.subject}</b> - ${log.message}</div>`,
                 stateBadge,
                 sortableTime,
-                `<button class="btn btn-light btn-sm text-primary" onclick="retrySingleLogByIndex(${index})"><i data-lucide="refresh-cw" style="width:12px;"></i> Re-send</button>`
+                `<button class="btn btn-light btn-sm text-primary" onclick="retrySingleLog('${log.recipient_email}', '${log.subject.replace(/'/g, "\\'")}', '${log.message.replace(/'/g, "\\'")}', ${log.employee})"><i data-lucide="refresh-cw" style="width:12px;"></i> Re-send</button>`
             ]);
         });
         table.draw();
         table.order([[3, 'desc']]).draw();
         table.columns.adjust();
         lucide.createIcons();
-    }
-
-    function retrySingleLogByIndex(index) {
-        const log = historyLogsData[index];
-        if (!log) return;
-        retrySingleLog(log.recipient_email, log.subject, log.message, log.employee);
     }
 
     function retrySingleLog(recipientEmail, subject, message, employeeId) {

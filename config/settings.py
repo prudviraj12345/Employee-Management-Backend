@@ -141,10 +141,14 @@ REST_FRAMEWORK = {
 EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
 EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))
 EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True') == 'True'
-EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', 'ceerasinternshipteama@gmail.com')
-EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', 'vxnmaqvtpsjrmlsc')
-DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'ceerasinternshipteama@gmail.com')
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER or 'webmaster@localhost')
 
-# Always use SMTP backend (credentials are always present via defaults above)
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-print(f"[INFO] SMTP email backend active. Sending from: {EMAIL_HOST_USER} via {EMAIL_HOST}:{EMAIL_PORT}")
+# Console fallback if credentials are not provided
+if not EMAIL_HOST_USER or not EMAIL_HOST_PASSWORD:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+    print(f"[WARNING] EMAIL_HOST_USER or EMAIL_HOST_PASSWORD not set. Emails will only print to console, NOT sent!")
+else:
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    print(f"[INFO] SMTP email backend active. Sending from: {EMAIL_HOST_USER} via {EMAIL_HOST}:{EMAIL_PORT}")
