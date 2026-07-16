@@ -104,3 +104,49 @@ def public_stats(request):
         "sent_today": sent_today,
         "delivery_rate": delivery_rate
     })
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def email_check(request):
+    """
+    Diagnostic endpoint: checks email backend config and tests SMTP connection.
+    Hit /api/email-check/ on Render to diagnose email issues.
+    """
+    from django.conf import settings
+    from django.core import mail
+
+    config = {
+        "EMAIL_BACKEND": settings.EMAIL_BACKEND,
+        "EMAIL_HOST": settings.EMAIL_HOST,
+        "EMAIL_PORT": settings.EMAIL_PORT,
+        "EMAIL_USE_TLS": settings.EMAIL_USE_TLS,
+        "EMAIL_HOST_USER": settings.EMAIL_HOST_USER or "(NOT SET)",
+        "EMAIL_HOST_PASSWORD": "SET" if settings.EMAIL_HOST_PASSWORD else "(NOT SET)",
+        "DEFAULT_FROM_EMAIL": settings.DEFAULT_FROM_EMAIL,
+    }
+
+    if 'smtp' not in settings.EMAIL_BACKEND.lower():
+        return Response({
+            "status": "misconfigured",
+            "message": "Using console backend — emails are printed to logs, NOT sent. Set EMAIL_HOST_USER and EMAIL_HOST_PASSWORD environment variables in Render.",
+            "config": config
+        }, status=500)
+
+    # Try opening an SMTP connection
+    connection = mail.get_connection()
+    try:
+        connection.open()
+        connection.close()
+        smtp_ok = True
+        smtp_error = None
+    except Exception as e:
+        smtp_ok = False
+        smtp_error = str(e)
+
+    return Response({
+        "status": "ok" if smtp_ok else "smtp_error",
+        "smtp_connection": "success" if smtp_ok else f"FAILED: {smtp_error}",
+        "config": config
+    }, status=200 if smtp_ok else 503)
+
