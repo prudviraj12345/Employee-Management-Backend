@@ -1199,8 +1199,8 @@
         const total = selectedEmployeeIds.length;
 
         Swal.fire({
-            title: 'Processing Dispatch...',
-            html: `Sending to <b>${total}</b> recipient${total > 1 ? 's' : ''}. Please wait...`,
+            title: 'Queuing Dispatch...',
+            html: `Submitting <b>${total}</b> recipient${total > 1 ? 's' : ''} for delivery...`,
             allowOutsideClick: false,
             didOpen: () => {
                 Swal.showLoading();
@@ -1219,7 +1219,6 @@
             formData.append('attachment', attachmentFile);
         }
 
-        let successCount = 0;
         try {
             const response = await $.ajax({
                 url: API_BASE + 'emails/batch_send/',
@@ -1227,25 +1226,35 @@
                 data: formData,
                 processData: false,
                 contentType: false,
-                timeout: 120000  // 2-minute client-side timeout for large batches
+                timeout: 30000  // 30s — just for the queuing phase (should return in <1s)
             });
-            if (response && typeof response.success_count !== 'undefined') {
-                successCount = response.success_count;
-            }
+
+            const queued = (response && response.queued) ? response.queued : total;
+
+            Swal.close();
+            Swal.fire({
+                title: 'Emails Queued!',
+                html: `<b>${queued}</b> email${queued > 1 ? 's are' : ' is'} being sent in the background.<br><small class="text-muted">Check Email History in a few seconds to see delivery status.</small>`,
+                icon: 'success',
+                timer: 4000,
+                timerProgressBar: true,
+                showConfirmButton: true,
+                confirmButtonText: 'OK'
+            });
+
+            // Auto-refresh history after a delay to pick up sent statuses
+            setTimeout(() => {
+                loadHistoryLogs();
+            }, 8000);
+
         } catch (err) {
             console.error('Batch dispatch failed', err);
-            Swal.fire('Error', 'A server error occurred during batch transmission. Please try again.', 'error');
+            Swal.close();
+            Swal.fire('Error', 'Could not queue emails. Please check your connection and try again.', 'error');
             return;
         }
 
-        Swal.close();
-        Swal.fire({
-            title: 'Transmission Complete',
-            text: `Successfully dispatched ${successCount} out of ${total} emails.`,
-            icon: successCount === total ? 'success' : 'warning'
-        });
-
-        // Reset UI state
+        // Reset UI state immediately
         selectedEmployeeIds = [];
         updateSelectedCountUI();
         $('.employee-checkbox').prop('checked', false);

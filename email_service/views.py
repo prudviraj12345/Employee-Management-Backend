@@ -103,13 +103,138 @@ class EmailLogViewSet(viewsets.ModelViewSet):
         email.save()
         _save_history(email)
 
+
+def _send_batch_thread(log_ids, att_content, att_name, att_content_type):
+    """
+    Background thread: sends emails for already-created EmailLog records.
+    Receives only primitive data (IDs + bytes) so no ORM objects cross thread boundary.
+    """
+    from django.db import close_old_connections
+    from django.utils import timezone
+    from django.core import mail
+    from email_service.models import EmailLog
+    from history.models import EmailHistory
+
+    # Give Django fresh DB connections inside the thread
+    close_old_connections()
+
+    connection = mail.get_connection()
+    try:
+        connection.open()
+    except Exception as e:
+        logger.exception(f"[batch_thread] SMTP connection failed: {e}")
+        # Mark all as Failed
+        for log_id in log_ids:
+            try:
+                log = EmailLog.objects.get(id=log_id)
+                log.status = 'Failed'
+                log.sent_at = timezone.now()
+                log.save()
+                EmailHistory.objects.create(
+                    employee=log.employee,
+                    recipient_email=log.recipient_email,
+                    subject=log.subject,
+                    message=log.message,
+                    status='Failed',
+                    retry_count=log.retry_count,
+                    sent_at=log.sent_at,
+                )
+            except Exception:
+                pass
+        close_old_connections()
+        return
+
+    for log_id in log_ids:
+        try:
+            log = EmailLog.objects.get(id=log_id)
+        except Exception:
+            continue
+
+        email_message = _build_email_message(
+            subject=log.subject,
+            body=log.message,
+            to_email=log.recipient_email,
+            connection=connection,
+            attachment_content=att_content,
+            attachment_name=att_name,
+            attachment_content_type=att_content_type,
+        )
+
+        try:
+            email_message.send(fail_silently=False)
+            log.status = 'Sent'
+        except Exception as e:
+            logger.exception(f"[batch_thread] Failed to send to {log.recipient_email}: {e}")
+            log.status = 'Failed'
+
+        log.sent_at = timezone.now()
+        log.save()
+
+        try:
+            EmailHistory.objects.create(
+                employee=log.employee,
+                recipient_email=log.recipient_email,
+                subject=log.subject,
+                message=log.message,
+                status=log.status,
+                retry_count=log.retry_count,
+                sent_at=log.sent_at,
+            )
+        except Exception as e:
+            logger.exception(f"[batch_thread] History write failed for {log.recipient_email}: {e}")
+
+    try:
+        connection.close()
+    except Exception:
+        pass
+
+    close_old_connections()
+
+
+class EmailLogViewSet(viewsets.ModelViewSet):
+
+    queryset = EmailLog.objects.all()
+    serializer_class = EmailLogSerializer
+
+    def perform_create(self, serializer):
+        """Handle single email dispatch (one recipient at a time)."""
+        email = serializer.save()
+        email.status = 'Sending'
+        email.save()
+
+        # Resolve attachment once
+        attachment_file = self.request.FILES.get('attachment') or self.request.data.get('attachment')
+        att_content, att_name, att_content_type = _resolve_attachment(attachment_file)
+
+        email_message = _build_email_message(
+            subject=email.subject,
+            body=email.message,
+            to_email=email.recipient_email,
+            attachment_content=att_content,
+            attachment_name=att_name,
+            attachment_content_type=att_content_type,
+        )
+
+        try:
+            email_message.send(fail_silently=False)
+            email.status = 'Sent'
+        except Exception as e:
+            logger.exception(f"Failed to send email to {email.recipient_email}: {e}")
+            email.status = 'Failed'
+
+        email.sent_at = timezone.now()
+        email.save()
+        _save_history(email)
+
     @action(detail=False, methods=['post'])
     def batch_send(self, request):
         """
-        Efficient batch email dispatch using a single persistent SMTP connection.
+        Queues a batch of emails and returns 202 immediately.
+        Sending happens in a background thread — no Gunicorn timeout risk.
         Expects: employees[] (list of IDs), subject, message, optional attachment.
-        Returns: { success_count, total_count }
+        Returns: { queued: N }
         """
+        import threading
         from employee.models import Employee
 
         employee_ids = request.data.getlist('employees')
@@ -119,26 +244,17 @@ class EmailLogViewSet(viewsets.ModelViewSet):
         if not employee_ids:
             return Response({'error': 'No employees selected.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Resolve attachment once (avoids repeated stream reads)
+        # Read attachment BEFORE returning — request object won't exist in the thread
         attachment_file = request.FILES.get('attachment') or request.data.get('attachment')
         att_content, att_name, att_content_type = _resolve_attachment(attachment_file)
 
-        success_count = 0
-        total_count = len(employee_ids)
-
-        # Open one SMTP connection for the entire batch
-        connection = mail.get_connection()
-        try:
-            connection.open()
-        except Exception as e:
-            logger.exception(f"Could not open SMTP connection: {e}")
-            return Response({'error': 'SMTP connection failed. Check email settings.'}, status=status.HTTP_502_BAD_GATEWAY)
-
+        # Create all EmailLog records synchronously (committed to DB before thread starts)
+        log_ids = []
         for emp_id in employee_ids:
             try:
                 emp = Employee.objects.get(id=emp_id)
             except Employee.DoesNotExist:
-                logger.warning(f"Employee with id={emp_id} not found, skipping.")
+                logger.warning(f"Employee id={emp_id} not found, skipping.")
                 continue
 
             rendered_subject = (subject_tpl
@@ -151,45 +267,28 @@ class EmailLogViewSet(viewsets.ModelViewSet):
                                 .replace('{{last_name}}', emp.last_name or '')
                                 .replace('{{employee_id}}', emp.employee_id or ''))
 
-            email_log = EmailLog.objects.create(
+            log = EmailLog.objects.create(
                 employee=emp,
                 recipient_email=emp.email,
                 subject=rendered_subject,
                 message=rendered_message,
-                status='Sending',
+                status='Queued',
             )
+            log_ids.append(log.id)
 
-            email_message = _build_email_message(
-                subject=rendered_subject,
-                body=rendered_message,
-                to_email=emp.email,
-                connection=connection,
-                attachment_content=att_content,
-                attachment_name=att_name,
-                attachment_content_type=att_content_type,
-            )
+        if not log_ids:
+            return Response({'error': 'No valid employees found.'}, status=status.HTTP_400_BAD_REQUEST)
 
-            try:
-                email_message.send(fail_silently=False)
-                email_log.status = 'Sent'
-                success_count += 1
-            except Exception as e:
-                logger.exception(f"Failed to send email to {emp.email}: {e}")
-                email_log.status = 'Failed'
+        # Spawn background thread — all DB records are committed, safe to read by ID
+        t = threading.Thread(
+            target=_send_batch_thread,
+            args=(log_ids, att_content, att_name, att_content_type),
+            daemon=True
+        )
+        t.start()
 
-            email_log.sent_at = timezone.now()
-            email_log.save()
-            _save_history(email_log)
-
-        try:
-            connection.close()
-        except Exception:
-            pass
-
-        return Response({
-            'success_count': success_count,
-            'total_count': total_count,
-        })
+        # Return immediately — frontend doesn't wait for SMTP
+        return Response({'queued': len(log_ids)}, status=status.HTTP_202_ACCEPTED)
 
 
 class EmailTemplateViewSet(viewsets.ModelViewSet):
